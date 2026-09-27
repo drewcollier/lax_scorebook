@@ -1,0 +1,16 @@
+{
+  "short_name": "Tigers Lax",
+  "name": "Fishers Tigers Lacrosse Scorebook",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/google/material-design-icons/master/png/sports/sports_sports_hockey/materialicons/48dp/2x/baseline_sports_hockey_black_48dp.png",
+      "type": "image/png",
+      "sizes": "96x96"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#1a1a2e",
+  "theme_color": "#CC0000",
+  "display": "standalone",
+  "orientation": "any"
+}
