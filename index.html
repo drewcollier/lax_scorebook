@@ -798,6 +798,13 @@ body {
   flex-wrap: wrap;
 }
 </style>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#CC0000">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
 </head>
 <body>
 
