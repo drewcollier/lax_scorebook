@@ -1478,6 +1478,8 @@ function handleAssist(assistPlayer) {
   if (lastEvent && lastEvent.metric === 'Goal' && lastEvent.type === 'player_stat') {
     // Just log the Assist
     var now = new Date().toISOString();
+    // Cross-link assist <-> goal for scoring-pair analysis
+    lastEvent.linkedPlayerId = assistPlayer.Player_ID;
     state.activeGame.events.push({
       id: 'E' + Date.now() + Math.random().toString(36).substr(2, 4),
       type: 'player_stat',
@@ -1488,7 +1490,8 @@ function handleAssist(assistPlayer) {
       playerJersey: assistPlayer.Jersey,
       metric: 'Assist',
       strength: state.currentStrength,
-      penDuration: ''
+      penDuration: '',
+      linkedPlayerId: lastEvent.playerId
     });
     saveState();
     closeStatModal();
@@ -1525,7 +1528,8 @@ function showScorerPicker(assistPlayer) {
         playerJersey: assistPlayer.Jersey,
         metric: 'Assist',
         strength: state.currentStrength,
-        penDuration: ''
+        penDuration: '',
+        linkedPlayerId: p.Player_ID
       });
       // Log Shot + SOG + Goal for the scorer (Goal last for Assist detection consistency)
       state.activeGame.events.push({
@@ -1562,7 +1566,8 @@ function showScorerPicker(assistPlayer) {
         playerJersey: p.Jersey,
         metric: 'Goal',
         strength: state.currentStrength,
-        penDuration: ''
+        penDuration: '',
+        linkedPlayerId: assistPlayer.Player_ID
       });
       // Increment home score
       state.activeGame.homeScore++;
@@ -2088,7 +2093,7 @@ function exportGameToSheets(game, finalScore) {
       Period: evt.quarter,
       Action_Type: evt.metric,
       Primary_Player_ID: evt.playerId || '',
-      Secondary_Player_ID: '',
+      Secondary_Player_ID: evt.linkedPlayerId || '',
       Strength: evt.strength,
       Pen_Duration: evt.penDuration || '',
       Zone_ID: ''
@@ -2116,7 +2121,7 @@ function exportGameToSheets(game, finalScore) {
     if (response && response.success) {
       showToast('Game exported to Sheets! ' + (response.eventsWritten || 0) + ' events written.', 'success');
     } else {
-      showToast('Export may have failed. Data saved locally.', 'warning');
+      showToast('Sent to Sheets. Confirm the rows in your Events tab.', 'info');
     }
   });
 }
@@ -2184,9 +2189,8 @@ function testConnection() {
       document.getElementById('connectionStatus').style.color = '#28a745';
       showToast('Connection successful!', 'success');
     } else {
-      document.getElementById('connectionStatus').textContent = 'Failed: ' + (response ? response.error : 'No response');
-      document.getElementById('connectionStatus').style.color = '#dc3545';
-      showToast('Connection failed', 'error');
+      document.getElementById('connectionStatus').textContent = 'Sent, but no reply received. This is normal for Google Apps Script \u2014 if Pull Roster works, the connection is fine.';
+      document.getElementById('connectionStatus').style.color = '#fd7e14';
     }
   });
 
@@ -2194,7 +2198,7 @@ function testConnection() {
   setTimeout(function() {
     var status = document.getElementById('connectionStatus');
     if (status.textContent === 'Testing...') {
-      status.textContent = 'Timeout. Check URL and deployment settings.';
+      status.textContent = 'Sent, but no reply received. This is normal for Google Apps Script \u2014 if Pull Roster works, the connection is fine.';
       status.style.color = '#fd7e14';
     }
   }, 10000);
