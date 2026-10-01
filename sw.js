@@ -1,5 +1,5 @@
 // Bump CACHE_VERSION on every deploy so devices pick up the new app.
-const CACHE_VERSION = 'lax-scorebook-v11';
+const CACHE_VERSION = 'lax-scorebook-v14';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {
