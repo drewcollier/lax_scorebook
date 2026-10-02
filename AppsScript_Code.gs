@@ -26,6 +26,12 @@ function doGet(e) {
   if (action === 'getOfficials') {
     return handleGetOfficials(callback);
   }
+  if (action === 'getGames') {
+    return handleGetGames(callback);
+  }
+  if (action === 'getEvents') {
+    return handleGetEvents(callback, e.parameter.gameId || '');
+  }
 
   var output = ContentService.createTextOutput('Fishers Tigers Lacrosse Scorebook - Apps Script Active');
   output.setMimeType(ContentService.MimeType.TEXT);
@@ -110,6 +116,89 @@ function handleGetOfficials(callback) {
     officials.push({ Role: String(data[i][0]), Name: String(data[i][1]) });
   }
   var json = JSON.stringify({ success: true, officials: officials });
+  return ContentService.createTextOutput(callback + '(' + json + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+// ============================================================
+// READ ENDPOINTS FOR THE READ-ONLY VIEWER APP
+// ============================================================
+
+// Returns the list of games (newest first) so the viewer can populate a picker.
+function handleGetGames(callback) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Games');
+  if (!sheet) {
+    return ContentService.createTextOutput(callback + '({"success":false,"error":"Games tab not found"})')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  var data = sheet.getDataRange().getValues();
+  var games = [];
+  // Columns: 0 Game_ID,1 Date,2 Opponent,3 Location,4 Score,5 Game_Label, 6-14 meta.
+  for (var i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    var raw = data[i][1];
+    var dateStr = '';
+    if (raw) {
+      try { dateStr = Utilities.formatDate(new Date(raw), Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
+      catch (e) { dateStr = String(raw); }
+    }
+    games.push({
+      Game_ID: String(data[i][0]),
+      Date: dateStr,
+      Opponent: String(data[i][2] || ''),
+      Location: String(data[i][3] || ''),
+      Score: String(data[i][4] || ''),
+      Game_Label: String(data[i][5] || '')
+    });
+  }
+  games.reverse(); // newest first
+  var json = JSON.stringify({ success: true, games: games });
+  return ContentService.createTextOutput(callback + '(' + json + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+// Returns all Event rows for one Game_ID (or all events if gameId is blank).
+function handleGetEvents(callback, gameId) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Events');
+  if (!sheet) {
+    return ContentService.createTextOutput(callback + '({"success":false,"error":"Events tab not found"})')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  var data = sheet.getDataRange().getValues();
+  var tz = Session.getScriptTimeZone();
+  function clock(v) {
+    if (v === null || v === undefined || v === '') return '';
+    if (Object.prototype.toString.call(v) === '[object Date]') {
+      return Utilities.formatDate(v, tz, 'HH:mm');
+    }
+    var m = String(v).match(/(\d{1,2}):(\d{2})/);
+    return m ? (('0' + m[1]).slice(-2) + ':' + m[2]) : String(v);
+  }
+  var events = [];
+  // Events cols: 0 Timestamp,1 Game_ID,2 Period,3 Action_Type,4 Primary,5 Secondary,
+  // 6 Strength,7 Pen_Duration,8 Game_Clock,9 Penalty_Type,10 Penalty_Name,11 Zone_ID
+  for (var i = 1; i < data.length; i++) {
+    var gid = String(data[i][1]);
+    if (!gid) continue;
+    if (gameId && gid !== String(gameId)) continue;
+    events.push({
+      Timestamp: String(data[i][0] || ''),
+      Game_ID: gid,
+      Period: String(data[i][2] || ''),
+      Action_Type: String(data[i][3] || ''),
+      Primary_Player_ID: String(data[i][4] || ''),
+      Secondary_Player_ID: String(data[i][5] || ''),
+      Strength: String(data[i][6] || ''),
+      Pen_Duration: String(data[i][7] || ''),
+      Game_Clock: clock(data[i][8]),
+      Penalty_Type: String(data[i][9] || ''),
+      Penalty_Name: String(data[i][10] || ''),
+      Zone_ID: String(data[i][11] || '')
+    });
+  }
+  var json = JSON.stringify({ success: true, events: events });
   return ContentService.createTextOutput(callback + '(' + json + ')')
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
