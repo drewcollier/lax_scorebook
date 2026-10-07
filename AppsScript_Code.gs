@@ -12,6 +12,29 @@
 
 var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
 
+/**
+ * Write PIN (Option 3 security).
+ * The secret lives in Script Properties (File > Project Settings > Script Properties),
+ * key WRITE_PIN, so it is NOT visible in the public app source. Change it there and the
+ * new PIN takes effect immediately -- no redeploy needed.
+ *
+ * If no WRITE_PIN property is set, writes are LEFT OPEN (fail-open) so the app is never
+ * accidentally locked out before the property is configured. Set the property to turn
+ * enforcement on. Reads (getRoster/getGames/getEvents) and the connection test are never
+ * gated -- only the exportGame write is.
+ */
+function getWritePin_() {
+  var p = PropertiesService.getScriptProperties().getProperty('WRITE_PIN');
+  return (p === null || p === undefined) ? '' : String(p).trim();
+}
+
+function pinOk_(payload) {
+  var required = getWritePin_();
+  if (required === '') return true; // not configured yet -> fail open
+  var supplied = (payload && payload.pin !== undefined && payload.pin !== null) ? String(payload.pin).trim() : '';
+  return supplied === required;
+}
+
 // ============================================================
 // WEB APP ENTRY POINTS
 // ============================================================
@@ -62,6 +85,9 @@ function doPost(e) {
     return buildResponse({ success: true, message: 'Connection successful! Scorebook is linked.' });
   }
   if (payload.action === 'exportGame') {
+    if (!pinOk_(payload)) {
+      return buildResponse({ success: false, error: 'INVALID_PIN', message: 'Incorrect or missing PIN. Stats were not saved.' });
+    }
     return handleExportGame(payload.gameData);
   }
   return buildResponse({ success: false, error: 'Unknown action' });
