@@ -1,0 +1,6 @@
+# Only the Apps Script project files should be pushed to Google.
+# Ignore everything, then re-include the two files clasp should manage.
+**/**
+
+!Code.gs
+!appsscript.json

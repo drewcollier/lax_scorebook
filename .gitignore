@@ -1,0 +1,11 @@
+# Reference artifacts -- not app code, kept out of version control
+*.xlsx
+*.pdf
+GameLog_Header.txt
+GameLog_Row2.txt
+
+# Stale nested duplicate of the repo (old copies)
+lax_scorebook/
+
+# clasp credentials live in the home dir, never commit any that appear locally
+.clasprc.json
