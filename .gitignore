@@ -1,6 +1,8 @@
 # Reference artifacts -- not app code, kept out of version control
 *.xlsx
 *.pdf
+# ...but keep the shareable scorekeeper guide PDF (it IS a deliverable)
+!SCOREKEEPER-STARTUP-GUIDE.pdf
 GameLog_Header.txt
 GameLog_Row2.txt
 
