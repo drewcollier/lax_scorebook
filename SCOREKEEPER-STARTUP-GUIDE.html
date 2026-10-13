@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fishers Tigers Lacrosse Scorebook — Scorekeeper Startup Guide</title>
+<style>
+  :root {
+    --navy: #1a2744;
+    --accent: #2f6f3e;
+    --accent-light: #e8f3ea;
+    --amber: #b8860b;
+    --amber-light: #fdf6e3;
+    --border: #d0d4da;
+    --text: #1f2430;
+    --muted: #555b66;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    line-height: 1.55;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 40px 48px;
+    font-size: 15px;
+  }
+  header {
+    border-bottom: 4px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    color: var(--navy);
+    font-size: 1.7rem;
+    margin: 0 0 4px;
+  }
+  header .sub { color: var(--muted); font-size: 0.95rem; }
+  h2 {
+    color: #fff;
+    background: var(--navy);
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-size: 1.15rem;
+    margin: 32px 0 14px;
+  }
+  h3 {
+    color: var(--accent);
+    font-size: 1.02rem;
+    margin: 20px 0 6px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 3px;
+  }
+  p { margin: 8px 0; }
+  ol, ul { margin: 8px 0 8px; padding-left: 26px; }
+  li { margin: 5px 0; }
+  strong { color: var(--navy); }
+  code {
+    background: #eef0f3;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.9em;
+  }
+  .btn-ref {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 1px 9px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.88em;
+    white-space: nowrap;
+  }
+  .tip {
+    background: var(--amber-light);
+    border-left: 4px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 12px 0;
+    font-size: 0.95em;
+  }
+  .note {
+    background: var(--accent-light);
+    border-left: 4px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 12px 0;
+    font-size: 0.95em;
+  }
+  .meta-box {
+    background: #f7f8fa;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 16px 0;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 14px 0;
+    font-size: 0.93rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--navy); color: #fff; }
+  tr:nth-child(even) td { background: #f7f8fa; }
+  .checklist { list-style: none; padding-left: 4px; }
+  .checklist li::before { content: "\2610"; margin-right: 10px; font-size: 1.1em; color: var(--accent); }
+  .footer-contact {
+    margin-top: 28px;
+    padding: 14px 18px;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+  }
+  hr { border: none; border-top: 1px solid var(--border); margin: 26px 0; }
+  @media print {
+    body { padding: 0; max-width: 100%; font-size: 12.5px; }
+    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    th, .btn-ref, .footer-contact { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tip, .note, .meta-box, tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2, h3 { page-break-after: avoid; }
+    table, .meta-box, .tip, .note { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fishers Tigers Lacrosse Scorebook</h1>
+  <div class="sub">Scorekeeper Startup Guide &nbsp;•&nbsp; Setup time: about 5 minutes</div>
+</header>
+
+<p>Welcome! This guide gets you set up to keep score. You only have to do the
+one-time setup <strong>once</strong> on your device. After that, you'll just open
+the app and start the game.</p>
+
+<h2>What you'll need before you start</h2>
+<ul>
+  <li>A phone, tablet, or laptop with internet.</li>
+  <li>The <strong>app web address</strong> (link to the scorebook).</li>
+  <li>The <strong>Script Link</strong> — a long web address I will send you. This connects the app to our team's stats sheet.</li>
+  <li>The <strong>Stats PIN</strong> — a short number I will send you, needed to save a game.</li>
+</ul>
+<div class="tip">Keep the Script Link and PIN handy. You'll paste them in during setup.</div>
+
+<h2>Part 1 — One-time setup (do this once per device)</h2>
+
+<h3>Step 1: Open the app</h3>
+<ol>
+  <li>Open your web browser (Chrome, Safari, Edge — whatever you normally use).</li>
+  <li>Go to the app web address I sent you.</li>
+  <li>You should see the scorebook with four buttons across the top:
+      <span class="btn-ref">Game</span> <span class="btn-ref">Roster</span>
+      <span class="btn-ref">History</span> <span class="btn-ref">Settings</span></li>
+</ol>
+<div class="tip"><strong>Tip — add it to your home screen (optional but handy):</strong>
+  <ul>
+    <li><strong>iPhone/iPad:</strong> tap the Share button, then "Add to Home Screen."</li>
+    <li><strong>Android:</strong> tap the menu (three dots), then "Add to Home screen."</li>
+  </ul>
+  This gives you a tap-to-open icon so you don't have to type the address again.
+</div>
+
+<h3>Step 2: Connect the app to our stats sheet</h3>
+<ol>
+  <li>Tap the <span class="btn-ref">Settings</span> button at the top.</li>
+  <li>Find the box labeled <strong>"Google Apps Script URL."</strong></li>
+  <li><strong>Paste the Script Link</strong> I sent you into that box.
+      (To paste: tap and hold inside the box, then choose <strong>Paste</strong>.)</li>
+  <li>Tap <span class="btn-ref">Save</span>.</li>
+</ol>
+
+<h3>Step 3: Make sure the connection works</h3>
+<ol>
+  <li>Still on the <strong>Settings</strong> screen, tap <span class="btn-ref">Test Connection</span>.</li>
+  <li>You should see a small message confirming it connected.
+    <ul>
+      <li>✅ <strong>If it says connected</strong> — you're good, go to Step 4.</li>
+      <li>❌ <strong>If it shows an error</strong> — double-check you pasted the
+          <strong>entire</strong> Script Link (they're long and easy to cut off).
+          Re-paste it, tap <strong>Save</strong>, and try <strong>Test Connection</strong>
+          again. If it still fails, contact me.</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>Step 4: Load the team roster</h3>
+<ol>
+  <li>Tap the <span class="btn-ref">Roster</span> button at the top.</li>
+  <li>Tap <span class="btn-ref">Pull Roster from Sheets</span>. The player list fills in automatically.</li>
+  <li>Tap <span class="btn-ref">Pull Officials from Sheets</span> (this loads the referee/officials names you'll pick from before a game).</li>
+</ol>
+<div class="note">That's it — setup is done. You won't need to repeat Part 1 on this device.</div>
+
+<h2>Part 2 — Getting ready for a game</h2>
+<p>Do this shortly before game time.</p>
+
+<h3>Step 1: Open the app and check the roster</h3>
+<ol>
+  <li>Open the app (tap your home-screen icon, or go to the web address).</li>
+  <li>Tap <span class="btn-ref">Roster</span> and confirm the players are listed.
+      If the list looks empty or out of date, tap <strong>Pull Roster from Sheets</strong> again to refresh it.</li>
+</ol>
+
+<h3>Step 2: Set up the game</h3>
+<ol>
+  <li>Tap the <span class="btn-ref">Game</span> button at the top.</li>
+  <li>Fill in the game details:
+    <ul>
+      <li><strong>Opponent name</strong></li>
+      <li><strong>Date</strong> (it usually defaults to today)</li>
+      <li><strong>Location</strong> (Home or Away)</li>
+    </ul>
+  </li>
+  <li>Tap <span class="btn-ref">Start Game</span>.</li>
+  <li>A short pop-up appears to capture game details (weather, officials, start time, etc.).
+      Fill in what you know and tap <strong>Start Game</strong> again to begin.
+      Anything you're unsure of can be left as-is.</li>
+</ol>
+<div class="note">You're now ready to score the game. 🥍</div>
+
+<h2>Part 3 — Saving the game (the PIN)</h2>
+<p>When the game ends and you save it to the team sheet, the app will ask for the
+<strong>Stats PIN</strong> the first time on your device.</p>
+<ol>
+  <li>When prompted, type the <strong>Stats PIN</strong> I sent you.</li>
+  <li>The app remembers it on that device, so you won't be asked again.</li>
+</ol>
+<div class="meta-box"><strong>Why the PIN?</strong> It protects our official stats so only
+  our scorekeepers can save games. Viewing the app, loading the roster, and keeping score
+  never need the PIN — only <strong>saving</strong> a finished game does.</div>
+<p>If you ever mistype it or need to change it: go to
+  <span class="btn-ref">Settings</span> → <strong>Stats PIN</strong> →
+  <strong>Change / Clear Saved PIN</strong>.</p>
+
+<h2>Quick troubleshooting</h2>
+<table>
+  <tr><th>What you see</th><th>What to do</th></tr>
+  <tr><td>"Set Apps Script URL in Settings first"</td><td>You skipped Part 1, Step 2. Go to <strong>Settings</strong>, paste the Script Link, tap <strong>Save</strong>.</td></tr>
+  <tr><td>Roster is empty</td><td>Tap <strong>Roster</strong> → <strong>Pull Roster from Sheets</strong>.</td></tr>
+  <tr><td><strong>Test Connection</strong> fails</td><td>Re-paste the <strong>full</strong> Script Link (they get cut off easily), tap <strong>Save</strong>, try again.</td></tr>
+  <tr><td>App looks like an old version</td><td>Fully close the browser and reopen it.</td></tr>
+  <tr><td>Game won't save / asks for PIN</td><td>Type the <strong>Stats PIN</strong> I sent you. If rejected, use <strong>Settings → Stats PIN → Change / Clear Saved PIN</strong> and re-enter it.</td></tr>
+</table>
+
+<h2>Game-day checklist</h2>
+<ul class="checklist">
+  <li>App opens and shows the four tabs</li>
+  <li>Roster is loaded and current</li>
+  <li>Opponent, date, and location entered on the <strong>Game</strong> tab</li>
+  <li>Stats PIN handy for saving at the end</li>
+</ul>
+
+<div class="footer-contact">
+  Questions or anything looks off? Contact [your name / phone / email].
+</div>
+
+</body>
+</html>
