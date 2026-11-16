@@ -853,6 +853,39 @@ body {
   margin-top: 10px;
 }
 .sf-error-actions .btn { flex: 1; }
+.sf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.sf-grid-item {
+  padding: 10px 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--white);
+  text-align: center;
+  cursor: pointer;
+}
+.sf-grid-item:active { background: var(--red); border-color: var(--red); }
+.sf-grid-item .sf-grid-jersey { font-size: 1.2rem; font-weight: 700; }
+.sf-grid-item .sf-grid-name {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 12px;
+}
 
 /* Penalty name selection */
 .pen-name-section-label {
@@ -1098,6 +1131,12 @@ body {
       <button class="team-action-btn" onclick="logTeamAction('Ride_Fail')">Ride Fail</button>
     </div>
 
+    <!-- View toggle (V3.20): By Stat (default) or By Player -->
+    <div class="filter-bar" id="viewToggle">
+      <button class="filter-btn" data-view="stat" onclick="sfSetView('stat')">By Stat</button>
+      <button class="filter-btn" data-view="player" onclick="sfSetView('player')">By Player</button>
+    </div>
+
     <!-- By Stat panel (V3.20): Stat first, then jersey -->
     <div class="by-stat-panel" id="byStatPanel">
       <div class="label">By Stat &mdash; tap the stat, then enter the jersey</div>
@@ -1250,6 +1289,12 @@ body {
       </div>
     </div>
     <div id="sfJerseyEntry">
+      <div class="filter-bar" id="sfEntryToggle" style="justify-content:center;">
+        <button class="filter-btn" data-entry="keypad" onclick="sfSetEntry('keypad')">Keypad</button>
+        <button class="filter-btn" data-entry="grid" onclick="sfSetEntry('grid')">Jersey Grid</button>
+      </div>
+      <div class="sf-grid" id="sfJerseyGrid" style="display:none;"></div>
+      <div id="sfKeypadWrap">
       <div class="pen-clock-display" id="sfJerseyDisplay"><span class="pen-clock-empty">--</span></div>
       <div class="pen-keypad">
         <button class="pen-key" onclick="sfJerseyDigit('1')">1</button>
@@ -1264,6 +1309,7 @@ body {
         <button class="pen-key pen-key-back" onclick="sfJerseyBack()">&#9003;</button>
         <button class="pen-key" onclick="sfJerseyDigit('0')">0</button>
         <button class="pen-key" id="sfJerseyOk" onclick="sfJerseyConfirm()" style="opacity:0.4;">OK</button>
+      </div>
       </div>
       <button class="btn btn-secondary" id="sfNoAssistBtn" onclick="sfNoAssist()" style="display:none; width:100%; margin-top:12px;">No Assist</button>
       <button class="btn btn-secondary" onclick="sfCancel()" style="width:100%; margin-top:12px;">Cancel</button>
@@ -1965,6 +2011,7 @@ function renderGameUI() {
     renderStrengthBar();
     renderTimeouts();
     renderPlayerGrid();
+    sfApplyView();
     renderEventLog();
   } else {
     setup.style.display = 'block';
@@ -2116,12 +2163,13 @@ function renderPlayerGrid() {
 
   var oppPanel = document.getElementById('opponentPanel');
 
-  // If Opponent filter is active, show opponent panel and hide player grid content
+  // If Opponent filter is active, show opponent panel and hide player grid content.
+  // In By Stat view the opponent panel is always shown (no filter bar there).
   if (state.currentFilter === 'Opponent') {
     if (oppPanel) oppPanel.style.display = 'block';
     return;
   } else {
-    if (oppPanel) oppPanel.style.display = 'none';
+    if (oppPanel) oppPanel.style.display = (sfGetView() === 'stat') ? 'block' : 'none';
   }
 
   var filtered = getFilteredPlayers();
@@ -2271,11 +2319,101 @@ function sfUpdateSummary() {
 
 function sfShowEntry() {
   var isClock = (sfState.step === 'clock');
+  var useGrid = (sfGetEntry() === 'grid');
   document.getElementById('sfJerseyError').style.display = 'none';
   document.getElementById('sfJerseyEntry').style.display = isClock ? 'none' : 'block';
   document.getElementById('sfClockEntry').style.display = isClock ? 'block' : 'none';
+  document.getElementById('sfKeypadWrap').style.display = useGrid ? 'none' : 'block';
+  document.getElementById('sfJerseyGrid').style.display = useGrid ? 'grid' : 'none';
+  document.querySelectorAll('#sfEntryToggle .filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-entry') === sfGetEntry());
+  });
+  if (useGrid && !isClock) sfRenderGrid();
   sfUpdateJerseyDisplay();
   sfUpdateClockDisplay();
+}
+
+// ------------------------------------------------------------
+// Per-device preferences: view (By Stat / By Player) and jersey
+// entry (Keypad / Jersey Grid). Stored on this device only.
+// ------------------------------------------------------------
+var SF_VIEW_KEY = 'scorebook_view_mode';
+var SF_ENTRY_KEY = 'scorebook_entry_mode';
+
+function sfGetPref(key, def, allowed) {
+  var v = '';
+  try { v = localStorage.getItem(key) || ''; } catch (e) {}
+  return allowed.indexOf(v) !== -1 ? v : def;
+}
+function sfSetPref(key, v) {
+  try { localStorage.setItem(key, v); } catch (e) {}
+}
+function sfGetView() { return sfGetPref(SF_VIEW_KEY, 'stat', ['stat', 'player']); }
+function sfGetEntry() { return sfGetPref(SF_ENTRY_KEY, 'keypad', ['keypad', 'grid']); }
+
+function sfSetView(v) {
+  sfSetPref(SF_VIEW_KEY, v);
+  renderPlayerGrid();
+  sfApplyView();
+}
+
+function sfApplyView() {
+  var statView = (sfGetView() === 'stat');
+  document.querySelectorAll('#viewToggle .filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-view') === sfGetView());
+  });
+  var panel = document.getElementById('byStatPanel');
+  var filterBar = document.getElementById('filterBar');
+  var grid = document.getElementById('playerGrid');
+  if (panel) panel.style.display = statView ? 'block' : 'none';
+  if (filterBar) filterBar.style.display = statView ? 'none' : 'flex';
+  if (grid) grid.style.display = statView ? 'none' : '';
+}
+
+function sfSetEntry(m) {
+  sfSetPref(SF_ENTRY_KEY, m);
+  sfState.digits = '';
+  sfShowEntry();
+}
+
+// Jersey grid: only players who can be credited at this step.
+function sfRenderGrid() {
+  var gridEl = document.getElementById('sfJerseyGrid');
+  gridEl.innerHTML = '';
+  var list = state.players.filter(function(p) {
+    if (state.ejectedPlayers.indexOf(p.Player_ID) !== -1) return false;
+    if (sfState.step === 'assist') return !sfState.scorer || p.Player_ID !== sfState.scorer.Player_ID;
+    if (SF_GOALIE_ONLY[sfState.metric]) return p.Position === 'Goalie';
+    return true;
+  });
+  list.sort(function(a, b) {
+    var na = parseInt(a.Jersey, 10), nb = parseInt(b.Jersey, 10);
+    if (na !== nb) return (isNaN(na) ? 999 : na) - (isNaN(nb) ? 999 : nb);
+    return String(a.Jersey).length - String(b.Jersey).length; // #0 before #00
+  });
+  if (!list.length) {
+    var empty = document.createElement('div');
+    empty.className = 'sf-grid-empty';
+    empty.textContent = 'No eligible players on the roster.';
+    gridEl.appendChild(empty);
+    return;
+  }
+  list.forEach(function(p) {
+    var item = document.createElement('div');
+    item.className = 'sf-grid-item';
+    var j = document.createElement('div');
+    j.className = 'sf-grid-jersey';
+    j.textContent = '#' + p.Jersey;
+    var n = document.createElement('div');
+    n.className = 'sf-grid-name';
+    n.textContent = p.Name || '';
+    item.appendChild(j);
+    item.appendChild(n);
+    item.addEventListener('click', function() {
+      sfAcceptPlayer(p, String(p.Jersey).trim());
+    });
+    gridEl.appendChild(item);
+  });
 }
 
 function sfShowError(msg) {
@@ -2328,6 +2466,11 @@ function sfJerseyConfirm() {
     sfShowError('Jersey #' + jersey + " doesn't exist on the roster. Re-enter or cancel.");
     return;
   }
+  sfAcceptPlayer(player, jersey);
+}
+
+// Shared by the keypad and the jersey grid.
+function sfAcceptPlayer(player, jersey) {
   if (state.ejectedPlayers.indexOf(player.Player_ID) !== -1) {
     sfShowError('#' + jersey + ' has been ejected and can\u2019t be credited. Re-enter or cancel.');
     return;
