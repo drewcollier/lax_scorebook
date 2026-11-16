@@ -3,6 +3,7 @@
 *.pdf
 # ...but keep the shareable scorekeeper guide PDF (it IS a deliverable)
 !SCOREKEEPER-STARTUP-GUIDE.pdf
+!GAME-DAY-CHECKLIST.pdf
 GameLog_Header.txt
 GameLog_Row2.txt
 

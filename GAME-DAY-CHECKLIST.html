@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fishers Tigers Lacrosse Scorebook - Game-Day Checklist</title>
+<style>
+  @page { size: letter; margin: 0.45in 0.5in; }
+  :root { --navy: #1b2a4a; --accent: #2e7d32; --red: #c62828; --text: #1f2430; --muted: #5a6273; --line: #d5d9e2; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: var(--text); font-size: 10.5pt; line-height: 1.3; margin: 0; }
+  header { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 3px solid var(--red); padding-bottom: 5px; margin-bottom: 8px; }
+  header h1 { font-size: 16pt; margin: 0; color: var(--navy); }
+  header .sub { font-size: 9pt; color: var(--muted); }
+  .rule { background: var(--navy); color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 10.5pt; margin-bottom: 9px; text-align: center; }
+  .rule strong { color: #ffd54f; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; }
+  section { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px 7px; page-break-inside: avoid; }
+  section.wide { grid-column: 1 / -1; }
+  h2 { font-size: 10.5pt; margin: 0 0 4px; color: #fff; background: var(--navy); border-radius: 4px; padding: 3px 8px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { position: relative; padding: 2px 0 2px 20px; }
+  li::before { content: "\2610"; position: absolute; left: 0; top: 0; font-size: 12pt; color: var(--accent); }
+  .k { display: inline-block; background: var(--accent); color: #fff; border-radius: 3px; padding: 0 5px; font-size: 9pt; font-weight: 700; }
+  .note { color: var(--muted); font-size: 9pt; }
+  .tip { background: #fff8e1; border-left: 4px solid #f9a825; padding: 5px 9px; margin-top: 9px; font-size: 9.5pt; border-radius: 4px; }
+  footer { margin-top: 9px; background: var(--navy); color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 9.5pt; text-align: center; }
+  footer a { color: #fff; }
+  h2, .rule, footer, .k, li::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .tip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Game-Day Checklist</h1>
+  <span class="sub">Fishers Tigers Lacrosse Scorebook &middot; V3.22 &middot; drewcollier.github.io/lax_scorebook</span>
+</header>
+
+<div class="rule">Every stat is entered the way it is called: <strong>Stat &rarr; Jersey # &rarr; Time</strong> (time only when asked)</div>
+
+<div class="grid">
+  <section>
+    <h2>1. At the field, 15 minutes before</h2>
+    <ul>
+      <li>Fully close and reopen the browser. Badge says <strong>V3.22</strong>.</li>
+      <li><span class="k">Settings</span> &rarr; <span class="k">Test Connection</span> says connected.</li>
+      <li><span class="k">Roster</span> &rarr; <span class="k">Pull Roster from Sheets</span>. Starters look right.</li>
+      <li>Device charged (or battery pack). Auto-lock off if possible.</li>
+      <li>Decide who calls stats and who taps.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>2. Starting the game</h2>
+    <ul>
+      <li><span class="k">Game</span> tab: opponent, date, Home/Away, then <span class="k">Start Game</span>.</li>
+      <li>Fill in officials and weather if known. Leave the rest.</li>
+      <li><span class="k">By Stat</span> is selected.</li>
+      <li><span class="k">Keypad</span> or <span class="k">Jersey Grid</span>, whichever you prefer.</li>
+      <li>Quarter shows <strong>Q1</strong>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Goals</h2>
+    <ul>
+      <li><span class="k">Goal</span> &rarr; scorer # &rarr; <span class="k">OK</span></li>
+      <li>Assist # &rarr; <span class="k">OK</span>, or <span class="k">No Assist</span></li>
+      <li><strong>Time on the clock, every goal</strong> (e.g. 0934 = 9:34)</li>
+      <li>Shot location, or <span class="k">Skip</span> if you missed it</li>
+      <li class="note">A goal also counts as a shot and a shot on goal. Don't enter those separately.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Penalties</h2>
+    <ul>
+      <li><span class="k">PENALTY</span> &rarr; team &rarr; player &rarr; <strong>clock time (enter it carefully)</strong> &rarr; penalty &rarr; duration</li>
+      <li>Personal foul that's non-releasable? Tick <span class="k">Locked in</span>.</li>
+      <li>Penalty over? Tap <span class="k">Served</span> in the Active penalties box.</li>
+      <li class="note">EVEN / MAN-UP / MAN-DOWN update by themselves. Don't tap them.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. Through the game</h2>
+    <ul>
+      <li>Change the quarter at every break, including OT.</li>
+      <li>Mistake? Find it in the Event Log and tap <span class="k">Undo</span>.</li>
+      <li>"Jersey # doesn't exist"? Tap <span class="k">Re-enter</span>, or <span class="k">Cancel</span>.</li>
+      <li>"Penalty already expired" after a goal? Tap <span class="k">OK</span> and carry on.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. After the game</h2>
+    <ul>
+      <li>Tap <span class="k">END GAME</span>.</li>
+      <li>Save to the team sheet. Enter the <strong>Stats PIN</strong> if asked.</li>
+      <li>Wait for the saved message before closing the app.</li>
+      <li>Jot down anything confusing and pass it on.</li>
+    </ul>
+  </section>
+</div>
+
+<div class="tip"><strong>Don't stop to fix things during play.</strong> Keep entering stats in order. Use Undo at the next stoppage, and tap Served for any penalty you forgot when you notice it.</div>
+
+<footer>Questions or anything looks off? Contact Drew Collier: 317-658-4777 or <a href="mailto:andrew.collier@gmail.com">andrew.collier@gmail.com</a></footer>
+</body>
+</html>
