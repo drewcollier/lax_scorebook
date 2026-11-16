@@ -129,7 +129,13 @@
     h2, h3 { page-break-after: avoid; }
     table, .meta-box, .tip, .note { page-break-inside: avoid; }
   }
-</style>
+  .shot { margin: 12px auto; text-align: center; page-break-inside: avoid; }
+  .shot img { width: 100%; max-width: 300px; border: 1px solid #c9ced8; border-radius: 8px; }
+  .shot.tall img { max-width: 250px; }
+  .shot figcaption { font-size: 0.85em; color: #555; margin-top: 4px; }
+  .shot-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; page-break-inside: avoid; }
+  .shot-row .shot { flex: 1 1 0; margin: 8px 0; max-width: 240px; }
+  .shot-row .shot img { max-width: 100%; }</style>
 </head>
 <body>
 
@@ -145,7 +151,7 @@ the app and start the game.</p>
 <h2>What you'll need before you start</h2>
 <ul>
   <li>A phone, tablet, or laptop with internet.</li>
-  <li>The <strong>app web address</strong> (link to the scorebook).</li>
+  <li>The <strong>app web address</strong>: <a href="https://drewcollier.github.io/lax_scorebook/">https://drewcollier.github.io/lax_scorebook/</a></li>
   <li>The <strong>Script Link</strong> — a long web address I will send you. This connects the app to our team's stats sheet.</li>
   <li>The <strong>Stats PIN</strong> — a short number I will send you, needed to save a game.</li>
 </ul>
@@ -156,7 +162,7 @@ the app and start the game.</p>
 <h3>Step 1: Open the app</h3>
 <ol>
   <li>Open your web browser (Chrome, Safari, Edge — whatever you normally use).</li>
-  <li>Go to the app web address I sent you.</li>
+  <li>Go to <a href="https://drewcollier.github.io/lax_scorebook/"><strong>https://drewcollier.github.io/lax_scorebook/</strong></a></li>
   <li>You should see the scorebook with four buttons across the top:
       <span class="btn-ref">Game</span> <span class="btn-ref">Roster</span>
       <span class="btn-ref">History</span> <span class="btn-ref">Settings</span></li>
@@ -177,6 +183,7 @@ the app and start the game.</p>
       (To paste: tap and hold inside the box, then choose <strong>Paste</strong>.)</li>
   <li>Tap <span class="btn-ref">Save</span>.</li>
 </ol>
+<figure class="shot "><img src="guide-images/settings.png" alt="Settings: paste the Script Link, then tap Save"><figcaption>Settings: paste the Script Link, then tap Save</figcaption></figure>
 
 <h3>Step 3: Make sure the connection works</h3>
 <ol>
@@ -198,6 +205,7 @@ the app and start the game.</p>
   <li>Tap <span class="btn-ref">Pull Roster from Sheets</span>. The player list fills in automatically.</li>
   <li>Tap <span class="btn-ref">Pull Officials from Sheets</span> (this loads the referee/officials names you'll pick from before a game).</li>
 </ol>
+<figure class="shot "><img src="guide-images/roster.png" alt="Roster: tap Pull Roster from Sheets"><figcaption>Roster: tap Pull Roster from Sheets</figcaption></figure>
 <div class="note">That's it — setup is done. You won't need to repeat Part 1 on this device.</div>
 
 <h2>Part 2 — Getting ready for a game</h2>
@@ -225,18 +233,21 @@ the app and start the game.</p>
       Fill in what you know and tap <strong>Start Game</strong> again to begin.
       Anything you're unsure of can be left as-is.</li>
 </ol>
+<figure class="shot "><img src="guide-images/setup.png" alt="Game tab before the game: enter the opponent, then Start Game"><figcaption>Game tab before the game: enter the opponent, then Start Game</figcaption></figure>
 <div class="note">You're now ready to score the game. 🥍</div>
 
 <h2>Part 3 — Scoring the game</h2>
 <p>The app works the way stats are called out: <strong>Stat, Player, Time (only if needed)</strong>.
 For example: "Ground ball, number 3." Or: "Goal, number 27, assisted by number 9, time 11:15."</p>
 <p>On the <span class="btn-ref">Game</span> tab, make sure <span class="btn-ref">By Stat</span> is selected at the top of the screen.</p>
+<figure class="shot tall"><img src="guide-images/bystat.png" alt="Game tab with By Stat selected"><figcaption>Game tab with By Stat selected</figcaption></figure>
 
 <h3>Recording a stat</h3>
 <ol>
   <li>Tap the stat (for example <span class="btn-ref">Ground Ball</span>).</li>
   <li>Tap the jersey number on the keypad (one or two digits), then tap <span class="btn-ref">OK</span>.</li>
 </ol>
+<figure class="shot "><img src="guide-images/keypad.png" alt="Ground Ball: key in #3, then OK"><figcaption>Ground Ball: key in #3, then OK</figcaption></figure>
 <p>That's it. The stat shows up in the Event Log at the bottom of the screen.</p>
 <table>
   <tr><th>Stat</th><th>What happens after you enter the jersey</th></tr>
@@ -258,6 +269,11 @@ For example: "Ground ball, number 3." Or: "Goal, number 27, assisted by number 9
   <li>Enter the <strong>time on the clock</strong> as four digits (for example <strong>0934</strong> for 9:34), tap <span class="btn-ref">OK</span>. The time is required for every goal.</li>
   <li>Tap the <strong>shot location</strong>, or tap <span class="btn-ref">Skip</span>.</li>
 </ol>
+<div class="shot-row">
+<figure class="shot "><img src="guide-images/goal-assist.png" alt="Step 3: the assist, or No Assist"><figcaption>Step 3: the assist, or No Assist</figcaption></figure>
+<figure class="shot "><img src="guide-images/goal-clock.png" alt="Step 4: the time on the clock"><figcaption>Step 4: the time on the clock</figcaption></figure>
+<figure class="shot "><img src="guide-images/zone.png" alt="Step 5: the shot location, or Skip"><figcaption>Step 5: the shot location, or Skip</figcaption></figure>
+</div>
 <p>The goal also counts as a shot and a shot on goal automatically. Do not enter those
 separately. Nothing is saved until the last step, so if you tap <strong>Cancel</strong> before
 then, no goal is recorded.</p>
@@ -266,6 +282,7 @@ then, no goal is recorded.</p>
 <p>The message "Jersey # doesn't exist on the roster" means that number is not on your roster.
 Tap <span class="btn-ref">Re-enter</span> to try again, or <span class="btn-ref">Cancel</span>.
 If the number is right, the roster may be out of date. Pull it again (see Part 2).</p>
+<figure class="shot "><img src="guide-images/error.png" alt="A jersey number that is not on the roster"><figcaption>A jersey number that is not on the roster</figcaption></figure>
 
 <h3>Other options</h3>
 <ul>
@@ -277,6 +294,10 @@ If the number is right, the roster may be out of date. Pull it again (see Part 2
   <li><strong>Penalties and ejections:</strong> use the <strong>PENALTY</strong> and <strong>EJECTION</strong> buttons, same as always.</li>
   <li><strong>Fixing a mistake:</strong> find the entry in the Event Log and tap <strong>Undo</strong>.</li>
 </ul>
+<div class="shot-row">
+<figure class="shot "><img src="guide-images/grid.png" alt="Jersey Grid: tap the player"><figcaption>Jersey Grid: tap the player</figcaption></figure>
+<figure class="shot "><img src="guide-images/byplayer.png" alt="By Player view: player cards"><figcaption>By Player view: player cards</figcaption></figure>
+</div>
 <h2>Part 4 — Saving the game (the PIN)</h2>
 <p>When the game ends and you save it to the team sheet, the app will ask for the
 <strong>Stats PIN</strong> the first time on your device.</p>
@@ -312,7 +333,7 @@ If the number is right, the roster may be out of date. Pull it again (see Part 2
 </ul>
 
 <div class="footer-contact">
-  Questions or anything looks off? Contact [your name / phone / email].
+  Questions or anything looks off? Contact Drew Collier: 317-658-4777 or <a href="mailto:andrew.collier@gmail.com">andrew.collier@gmail.com</a>
 </div>
 
 </body>
