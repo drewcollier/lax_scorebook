@@ -2215,15 +2215,19 @@ function applyZoneToLastShot(scorerId, zid, startIndex) {
   renderEventLog();
 }
 
-function logStat(metric) {
-  if (!selectedPlayer || !state.activeGame) return;
+// logStat(metric, playerArg)
+// playerArg is optional. The stat-first flow passes the player directly; the
+// player-first flow (stat modal) omits it and falls back to selectedPlayer.
+function logStat(metric, playerArg) {
+  var player = playerArg || selectedPlayer;
+  if (!player || !state.activeGame) return;
 
   // GA (Goal Allowed) — goalie-only. Replaces the removed "Opp Goal" button.
   // Logs the GA against the specific goalie AND cascades the opponent goal
   // (Opp_Goal + Opp_SOG + Opp_Shot), bumps the opponent score, then prompts
   // for the game clock (stamped on the Opp_Goal event only, no zone).
   if (metric === 'GA') {
-    if (selectedPlayer.Position !== 'Goalie') {
+    if (player.Position !== 'Goalie') {
       showToast('GA is only for goalies', 'error');
       return;
     }
@@ -2235,9 +2239,9 @@ function logStat(metric) {
       type: 'player_stat',
       quarter: state.currentQuarter,
       timestamp: gaNow,
-      playerId: selectedPlayer.Player_ID,
-      playerName: selectedPlayer.Name,
-      playerJersey: selectedPlayer.Jersey,
+      playerId: player.Player_ID,
+      playerName: player.Name,
+      playerJersey: player.Jersey,
       metric: 'GA',
       strength: state.currentStrength,
       penDuration: ''
@@ -2283,7 +2287,7 @@ function logStat(metric) {
     state.activeGame.awayScore++;
     document.getElementById('awayScore').textContent = state.activeGame.awayScore;
     saveState();
-    var gaJersey = selectedPlayer.Jersey;
+    var gaJersey = player.Jersey;
     closeStatModal();
     renderEventLog();
     showToast('#' + gaJersey + ' GA — Opponent Goal', 'info');
@@ -2312,9 +2316,9 @@ function logStat(metric) {
       type: 'player_stat',
       quarter: state.currentQuarter,
       timestamp: now,
-      playerId: selectedPlayer.Player_ID,
-      playerName: selectedPlayer.Name,
-      playerJersey: selectedPlayer.Jersey,
+      playerId: player.Player_ID,
+      playerName: player.Name,
+      playerJersey: player.Jersey,
       metric: 'Shot',
       strength: state.currentStrength,
       penDuration: ''
@@ -2324,9 +2328,9 @@ function logStat(metric) {
       type: 'player_stat',
       quarter: state.currentQuarter,
       timestamp: now,
-      playerId: selectedPlayer.Player_ID,
-      playerName: selectedPlayer.Name,
-      playerJersey: selectedPlayer.Jersey,
+      playerId: player.Player_ID,
+      playerName: player.Name,
+      playerJersey: player.Jersey,
       metric: 'SOG',
       strength: state.currentStrength,
       penDuration: ''
@@ -2338,9 +2342,9 @@ function logStat(metric) {
       type: 'player_stat',
       quarter: state.currentQuarter,
       timestamp: now,
-      playerId: selectedPlayer.Player_ID,
-      playerName: selectedPlayer.Name,
-      playerJersey: selectedPlayer.Jersey,
+      playerId: player.Player_ID,
+      playerName: player.Name,
+      playerJersey: player.Jersey,
       metric: 'Shot',
       strength: state.currentStrength,
       penDuration: ''
@@ -2354,9 +2358,9 @@ function logStat(metric) {
     type: 'player_stat',
     quarter: state.currentQuarter,
     timestamp: now,
-    playerId: selectedPlayer.Player_ID,
-    playerName: selectedPlayer.Name,
-    playerJersey: selectedPlayer.Jersey,
+    playerId: player.Player_ID,
+    playerName: player.Name,
+    playerJersey: player.Jersey,
     metric: metric,
     strength: state.currentStrength,
     penDuration: ''
@@ -2393,10 +2397,10 @@ function logStat(metric) {
 
   saveState();
 
-  // v3: capture identity BEFORE closeStatModal() clears selectedPlayer.
+  // v3: capture identity before closeStatModal() clears selectedPlayer.
   var isShotFamily = (metric === 'Shot' || metric === 'SOG' || metric === 'Goal');
-  var scorerId = selectedPlayer.Player_ID;
-  var scorerJersey = selectedPlayer.Jersey;
+  var scorerId = player.Player_ID;
+  var scorerJersey = player.Jersey;
 
   closeStatModal();
   renderEventLog();
