@@ -819,6 +819,40 @@ body {
 .pen-key:active { background: var(--red); }
 .pen-key.pen-key-back { color: var(--orange); }
 
+/* V3.20 stat-first entry: "By Stat" panel + jersey keypad */
+.by-stat-panel { margin-bottom: 12px; }
+.by-stat-panel .label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.by-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.by-stat-grid .stat-btn { font-size: 0.8rem; }
+.stat-btn.goalie-stat { border-color: var(--yellow); }
+.sf-error {
+  background: var(--bg-secondary);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  color: var(--white);
+  font-size: 0.9rem;
+  text-align: center;
+}
+.sf-error-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.sf-error-actions .btn { flex: 1; }
+
 /* Penalty name selection */
 .pen-name-section-label {
   font-size: 0.8rem;
@@ -1063,6 +1097,21 @@ body {
       <button class="team-action-btn" onclick="logTeamAction('Ride_Fail')">Ride Fail</button>
     </div>
 
+    <!-- By Stat panel (V3.20): Stat first, then jersey -->
+    <div class="by-stat-panel" id="byStatPanel">
+      <div class="label">By Stat &mdash; tap the stat, then enter the jersey</div>
+      <div class="by-stat-grid">
+        <button class="stat-btn" onclick="sfStartStat('GB')">Ground Ball</button>
+        <button class="stat-btn" onclick="sfStartStat('TO')">Turnover</button>
+        <button class="stat-btn" onclick="sfStartStat('CTO')">Caused Turnover</button>
+        <button class="stat-btn" onclick="sfStartStat('INT')">Interception</button>
+        <button class="stat-btn" onclick="sfStartStat('FOW')">Face Off Won</button>
+        <button class="stat-btn" onclick="sfStartStat('FOL')">Face Off Lost</button>
+        <button class="stat-btn goalie-stat" onclick="sfStartStat('Save')">Save</button>
+        <button class="stat-btn goalie-stat" onclick="sfStartStat('GA')">Goal Allowed</button>
+      </div>
+    </div>
+
     <!-- Position Filter -->
     <div class="filter-bar" id="filterBar">
       <button class="filter-btn active" data-filter="All" onclick="setFilter('All')">All</button>
@@ -1180,6 +1229,39 @@ body {
       <button class="stat-btn" onclick="logStat('FOL')">FOL</button>
     </div>
     <button class="btn btn-secondary" onclick="closeStatModal()" style="width:100%;">Cancel</button>
+  </div>
+</div>
+
+<!-- STAT-FIRST JERSEY KEYPAD (V3.20) -->
+<div class="modal-overlay" id="sfJerseyModal">
+  <div class="modal">
+    <h3 id="sfJerseyTitle">Stat</h3>
+    <p id="sfJerseyPrompt" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">Jersey # (tap digits, then OK):</p>
+    <div class="sf-error" id="sfJerseyError" style="display:none;">
+      <div id="sfJerseyErrorMsg"></div>
+      <div class="sf-error-actions">
+        <button class="btn btn-secondary" onclick="sfJerseyReenter()">Re-enter</button>
+        <button class="btn btn-danger" onclick="sfCancel()">Cancel</button>
+      </div>
+    </div>
+    <div id="sfJerseyEntry">
+      <div class="pen-clock-display" id="sfJerseyDisplay"><span class="pen-clock-empty">--</span></div>
+      <div class="pen-keypad">
+        <button class="pen-key" onclick="sfJerseyDigit('1')">1</button>
+        <button class="pen-key" onclick="sfJerseyDigit('2')">2</button>
+        <button class="pen-key" onclick="sfJerseyDigit('3')">3</button>
+        <button class="pen-key" onclick="sfJerseyDigit('4')">4</button>
+        <button class="pen-key" onclick="sfJerseyDigit('5')">5</button>
+        <button class="pen-key" onclick="sfJerseyDigit('6')">6</button>
+        <button class="pen-key" onclick="sfJerseyDigit('7')">7</button>
+        <button class="pen-key" onclick="sfJerseyDigit('8')">8</button>
+        <button class="pen-key" onclick="sfJerseyDigit('9')">9</button>
+        <button class="pen-key pen-key-back" onclick="sfJerseyBack()">&#9003;</button>
+        <button class="pen-key" onclick="sfJerseyDigit('0')">0</button>
+        <button class="pen-key" id="sfJerseyOk" onclick="sfJerseyConfirm()" style="opacity:0.4;">OK</button>
+      </div>
+      <button class="btn btn-secondary" onclick="sfCancel()" style="width:100%; margin-top:12px;">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -2099,6 +2181,111 @@ function openStatModal(player) {
 function closeStatModal() {
   document.getElementById('statModal').classList.remove('show');
   selectedPlayer = null;
+}
+
+// ============================================================
+// STAT-FIRST ENTRY (V3.20): Stat -> Jersey -> (Time) -> (Zone)
+// ============================================================
+// The spotter calls "Ground Ball, #3": tap the stat, key the jersey, OK.
+// Jersey entry is max 2 digits and must match the downloaded roster.
+var SF_LABELS = {
+  GB: 'Ground Ball', TO: 'Turnover', CTO: 'Caused Turnover', INT: 'Interception',
+  FOW: 'Face Off Won', FOL: 'Face Off Lost', Save: 'Save', GA: 'Goal Allowed',
+  Shot: 'Shot', SOG: 'Shot on Goal', Goal: 'Goal'
+};
+var SF_GOALIE_ONLY = { Save: true, GA: true };
+var sfState = { metric: null, digits: '' };
+
+function sfStartStat(metric) {
+  if (!state.activeGame) {
+    showToast('Start a game first', 'error');
+    return;
+  }
+  sfState.metric = metric;
+  sfState.digits = '';
+  document.getElementById('sfJerseyTitle').textContent = SF_LABELS[metric] || metric;
+  document.getElementById('sfJerseyPrompt').textContent = SF_GOALIE_ONLY[metric]
+    ? 'Goalie jersey # (tap digits, then OK):'
+    : 'Jersey # (tap digits, then OK):';
+  sfShowEntry();
+  document.getElementById('sfJerseyModal').classList.add('show');
+}
+
+function sfShowEntry() {
+  document.getElementById('sfJerseyError').style.display = 'none';
+  document.getElementById('sfJerseyEntry').style.display = 'block';
+  sfUpdateJerseyDisplay();
+}
+
+function sfShowError(msg) {
+  document.getElementById('sfJerseyErrorMsg').textContent = msg;
+  document.getElementById('sfJerseyEntry').style.display = 'none';
+  document.getElementById('sfJerseyError').style.display = 'block';
+}
+
+function sfUpdateJerseyDisplay() {
+  var disp = document.getElementById('sfJerseyDisplay');
+  if (sfState.digits) {
+    disp.textContent = '#' + sfState.digits;
+  } else {
+    disp.innerHTML = '<span class="pen-clock-empty">--</span>';
+  }
+  document.getElementById('sfJerseyOk').style.opacity = sfState.digits ? '1' : '0.4';
+}
+
+function sfJerseyDigit(n) {
+  if (sfState.digits.length >= 2) return; // no 3-digit jerseys
+  sfState.digits += n;
+  sfUpdateJerseyDisplay();
+}
+
+function sfJerseyBack() {
+  sfState.digits = sfState.digits.slice(0, -1);
+  sfUpdateJerseyDisplay();
+}
+
+function sfJerseyReenter() {
+  sfState.digits = '';
+  sfShowEntry();
+}
+
+// Exact match on the roster jersey (so #0 and #00 stay distinct).
+function sfFindPlayerByJersey(jersey) {
+  for (var i = 0; i < state.players.length; i++) {
+    if (String(state.players[i].Jersey).trim() === jersey) return state.players[i];
+  }
+  return null;
+}
+
+function sfJerseyConfirm() {
+  var jersey = sfState.digits;
+  if (!jersey) return;
+  var player = sfFindPlayerByJersey(jersey);
+  if (!player) {
+    sfShowError('Jersey #' + jersey + " doesn't exist on the roster. Re-enter or cancel.");
+    return;
+  }
+  if (state.ejectedPlayers.indexOf(player.Player_ID) !== -1) {
+    sfShowError('#' + jersey + ' has been ejected and can\u2019t be credited. Re-enter or cancel.');
+    return;
+  }
+  if (SF_GOALIE_ONLY[sfState.metric] && player.Position !== 'Goalie') {
+    sfShowError('#' + jersey + ' is not a goalie. ' + (SF_LABELS[sfState.metric]) + ' is for goalies only. Re-enter or cancel.');
+    return;
+  }
+  var metric = sfState.metric;
+  sfClose();
+  logStat(metric, player);
+}
+
+function sfCancel() {
+  sfClose();
+}
+
+function sfClose() {
+  document.getElementById('sfJerseyModal').classList.remove('show');
+  sfState.metric = null;
+  sfState.digits = '';
 }
 
 // ============================================================
