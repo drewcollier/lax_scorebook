@@ -227,7 +227,57 @@ the app and start the game.</p>
 </ol>
 <div class="note">You're now ready to score the game. 🥍</div>
 
-<h2>Part 3 — Saving the game (the PIN)</h2>
+<h2>Part 3 — Scoring the game</h2>
+<p>The app works the way stats are called out: <strong>Stat, Player, Time (only if needed)</strong>.
+For example: "Ground ball, number 3." Or: "Goal, number 27, assisted by number 9, time 11:15."</p>
+<p>On the <span class="btn-ref">Game</span> tab, make sure <span class="btn-ref">By Stat</span> is selected at the top of the screen.</p>
+
+<h3>Recording a stat</h3>
+<ol>
+  <li>Tap the stat (for example <span class="btn-ref">Ground Ball</span>).</li>
+  <li>Tap the jersey number on the keypad (one or two digits), then tap <span class="btn-ref">OK</span>.</li>
+</ol>
+<p>That's it. The stat shows up in the Event Log at the bottom of the screen.</p>
+<table>
+  <tr><th>Stat</th><th>What happens after you enter the jersey</th></tr>
+  <tr><td>Ground Ball, Turnover, Caused Turnover, Interception</td><td>Recorded right away</td></tr>
+  <tr><td>Face Off Won, Face Off Lost</td><td>Recorded right away</td></tr>
+  <tr><td>Save</td><td>Recorded right away (goalies only)</td></tr>
+  <tr><td>Goal Allowed</td><td>Asks for the time on the clock (goalies only)</td></tr>
+  <tr><td>Shot</td><td>Asks where the shot was taken from</td></tr>
+  <tr><td>Shot on Goal</td><td>Counts a shot too. Asks where the shot was taken from</td></tr>
+</table>
+<div class="tip"><strong>Shot location is the least important detail.</strong> If you missed it, tap <strong>Skip</strong>.</div>
+
+<h3>Recording a goal</h3>
+<p>Enter it in the same order it is called out:</p>
+<ol>
+  <li>Tap <span class="btn-ref">Goal</span>.</li>
+  <li>Enter the <strong>scorer's</strong> jersey number, tap <span class="btn-ref">OK</span>.</li>
+  <li>Enter the <strong>assist</strong> jersey number and tap <span class="btn-ref">OK</span>, or tap <span class="btn-ref">No Assist</span>.</li>
+  <li>Enter the <strong>time on the clock</strong> as four digits (for example <strong>0934</strong> for 9:34), tap <span class="btn-ref">OK</span>. The time is required for every goal.</li>
+  <li>Tap the <strong>shot location</strong>, or tap <span class="btn-ref">Skip</span>.</li>
+</ol>
+<p>The goal also counts as a shot and a shot on goal automatically. Do not enter those
+separately. Nothing is saved until the last step, so if you tap <strong>Cancel</strong> before
+then, no goal is recorded.</p>
+
+<h3>If the app says a jersey number doesn't exist</h3>
+<p>The message "Jersey # doesn't exist on the roster" means that number is not on your roster.
+Tap <span class="btn-ref">Re-enter</span> to try again, or <span class="btn-ref">Cancel</span>.
+If the number is right, the roster may be out of date. Pull it again (see Part 2).</p>
+
+<h3>Other options</h3>
+<ul>
+  <li><strong>Jersey Grid:</strong> if you would rather tap a player than type a number, tap
+  <span class="btn-ref">Jersey Grid</span> at the top of the jersey screen. The app remembers your choice
+  on this device. Tap <span class="btn-ref">Keypad</span> to switch back.</li>
+  <li><strong>By Player:</strong> tap <span class="btn-ref">By Player</span> at the top of the Game tab to see
+  player cards. Tap a player first, then the stat.</li>
+  <li><strong>Penalties and ejections:</strong> use the <strong>PENALTY</strong> and <strong>EJECTION</strong> buttons, same as always.</li>
+  <li><strong>Fixing a mistake:</strong> find the entry in the Event Log and tap <strong>Undo</strong>.</li>
+</ul>
+<h2>Part 4 — Saving the game (the PIN)</h2>
 <p>When the game ends and you save it to the team sheet, the app will ask for the
 <strong>Stats PIN</strong> the first time on your device.</p>
 <ol>
@@ -248,6 +298,7 @@ the app and start the game.</p>
   <tr><td>Roster is empty</td><td>Tap <strong>Roster</strong> → <strong>Pull Roster from Sheets</strong>.</td></tr>
   <tr><td><strong>Test Connection</strong> fails</td><td>Re-paste the <strong>full</strong> Script Link (they get cut off easily), tap <strong>Save</strong>, try again.</td></tr>
   <tr><td>App looks like an old version</td><td>Fully close the browser and reopen it.</td></tr>
+  <tr><td>"Jersey # doesn't exist on the roster"</td><td>That number is not on the roster. Tap <strong>Re-enter</strong>, or pull the roster again if it is out of date.</td></tr>
   <tr><td>Game won't save / asks for PIN</td><td>Type the <strong>Stats PIN</strong> I sent you. If rejected, use <strong>Settings → Stats PIN → Change / Clear Saved PIN</strong> and re-enter it.</td></tr>
 </table>
 
@@ -256,6 +307,7 @@ the app and start the game.</p>
   <li>App opens and shows the four tabs</li>
   <li>Roster is loaded and current</li>
   <li>Opponent, date, and location entered on the <strong>Game</strong> tab</li>
+  <li><strong>By Stat</strong> is selected on the Game tab</li>
   <li>Stats PIN handy for saving at the end</li>
 </ul>
 
