@@ -850,16 +850,64 @@ body {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
+.active-pens .ap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
 .active-pens .ap-title {
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+.active-pens .ap-clear-all {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.active-pens .ap-line { padding: 4px 0; }
+.active-pens .ap-team {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
   margin-bottom: 4px;
 }
-.active-pens .ap-line { color: var(--white); padding: 2px 0; }
-.active-pens .ap-team { font-weight: 700; margin-right: 6px; }
-.active-pens .ap-locked { color: var(--yellow); font-weight: 700; margin-left: 6px; }
+.active-pens .ap-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 6px 6px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--white);
+}
+.active-pens .ap-chip.is-locked { border-color: var(--yellow); }
+.active-pens .ap-chip-text { font-size: 0.85rem; font-weight: 600; }
+.active-pens .ap-served {
+  min-width: 72px;
+  min-height: 36px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.active-pens .ap-served:active { background: var(--green); }
+/* Strength is an indicator now (worked out from the penalty list), not a button. */
+.quarter-bar .qtr-right .strength-btn { pointer-events: none; cursor: default; }
 
 /* V3.20 stat-first entry: "By Stat" panel + jersey keypad */
 .by-stat-panel { margin-bottom: 12px; }
@@ -1152,9 +1200,9 @@ body {
         <button class="end-game-btn" onclick="endGame()">END GAME</button>
       </div>
       <div class="qtr-right">
-        <button class="strength-btn active-even" data-str="Even" onclick="userSetStrength('Even')">EVEN</button>
-        <button class="strength-btn" data-str="Man-Up" onclick="userSetStrength('Man-Up')">MAN-UP</button>
-        <button class="strength-btn" data-str="Man-Down" onclick="userSetStrength('Man-Down')">MAN-DOWN</button>
+        <button class="strength-btn active-even" data-str="Even" tabindex="-1">EVEN</button>
+        <button class="strength-btn" data-str="Man-Up" tabindex="-1">MAN-UP</button>
+        <button class="strength-btn" data-str="Man-Down" tabindex="-1">MAN-DOWN</button>
       </div>
     </div>
 
@@ -2056,7 +2104,7 @@ function renderGameUI() {
     document.getElementById('awayScore').textContent = state.activeGame.awayScore;
     document.getElementById('oppName').textContent = state.activeGame.opponent.toUpperCase();
     renderQuarterBar();
-    renderStrengthBar();
+    syncStrengthFromPenalties();
     renderTimeouts();
     renderPlayerGrid();
     sfApplyView();
@@ -2189,27 +2237,90 @@ function recordEmoResult(metricName) {
 }
 
 function renderStrengthBar() {
+  var c = penaltyCounts();
+  var gap = Math.abs(c.opponent - c.tigers);
+  var base = { 'Even': 'EVEN', 'Man-Up': 'MAN-UP', 'Man-Down': 'MAN-DOWN' };
   document.querySelectorAll('.strength-btn').forEach(function(btn) {
     var str = btn.getAttribute('data-str');
     btn.className = 'strength-btn';
+    var text = base[str] || str;
     if (str === state.currentStrength) {
-      if (str === 'Even') btn.classList.add('active-even');
-      else if (str === 'Man-Up') btn.classList.add('active-up');
-      else if (str === 'Man-Down') btn.classList.add('active-down');
+      if (str === 'Even') {
+        btn.classList.add('active-even');
+        if (c.tigers > 0) text += ' (' + c.tigers + ' v ' + c.opponent + ')';
+      } else if (str === 'Man-Up') {
+        btn.classList.add('active-up');
+        if (gap > 1) text += ' (' + gap + ')';
+      } else if (str === 'Man-Down') {
+        btn.classList.add('active-down');
+        if (gap > 1) text += ' (' + gap + ')';
+      }
     }
+    btn.textContent = text;
   });
   renderActivePenalties();
 }
 
 // ------------------------------------------------------------
-// ACTIVE PENALTIES (V3.22): a manual list shown under the strength buttons.
-// The app has no running clock, so entries stay until the scorekeeper taps
-// EVEN (clears the list), undoes the penalty, or a goal releases them.
-// Stored on the game: activeGame.activePenalties = [{id, team, label, locked}]
+// ACTIVE PENALTIES (V3.22). The penalty list is the single source of truth:
+// strength (Even / Man-Up / Man-Down) is worked out from it, and each penalty
+// is cleared one at a time with its own "Served" button.
+// Stored on the game: activeGame.activePenalties = [{
+//   id, team ('tigers'|'opponent'), label, locked (never releasable),
+//   duration (s), startQ, startClock (s left on the game clock, or null),
+//   lockedSecs (overlap with the other team's simultaneous foul) }]
 // ------------------------------------------------------------
-function userSetStrength(str) {
-  setStrength(str);
-  if (str === 'Even') clearActivePenalties();
+var PERIOD_ORDER = ['Q1', 'Q2', 'Q3', 'Q4', 'OT1', 'OT2'];
+
+function periodLength(q) {
+  return (q === 'OT1' || q === 'OT2') ? 240 : 720; // 12:00 quarters, 4:00 overtime
+}
+
+// "MM:SS" -> seconds, or null if it isn't a clock.
+function clockToSeconds(str) {
+  var m = /^(\d{1,2}):(\d{2})$/.exec(String(str || '').trim());
+  return m ? (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) : null;
+}
+
+// Game time served between two clock readings (the clock counts DOWN, and
+// penalties carry across quarters and half-time). Returns null when the
+// readings can't be compared (missing clock, or "now" is before "start").
+function elapsedBetween(startQ, startSec, nowQ, nowSec) {
+  var i1 = PERIOD_ORDER.indexOf(startQ), i2 = PERIOD_ORDER.indexOf(nowQ);
+  if (i1 === -1 || i2 === -1 || i2 < i1 || startSec === null || nowSec === null) return null;
+  if (nowSec > periodLength(nowQ) || startSec > periodLength(startQ)) return null;
+  if (i1 === i2) {
+    return startSec >= nowSec ? (startSec - nowSec) : null;
+  }
+  var total = startSec;
+  for (var k = i1 + 1; k < i2; k++) total += periodLength(PERIOD_ORDER[k]);
+  total += periodLength(nowQ) - nowSec;
+  return total;
+}
+
+function activePenaltyList() {
+  return (state.activeGame && state.activeGame.activePenalties) || [];
+}
+
+function penaltyCounts() {
+  var c = { tigers: 0, opponent: 0 };
+  activePenaltyList().forEach(function(p) { if (c[p.team] !== undefined) c[p.team]++; });
+  return c;
+}
+
+function strengthFromPenalties() {
+  var c = penaltyCounts();
+  if (c.opponent > c.tigers) return 'Man-Up';
+  if (c.tigers > c.opponent) return 'Man-Down';
+  return 'Even';
+}
+
+// Make the strength indicator match the list. setStrength keeps the
+// extra-man (EMO) tracking in step.
+function syncStrengthFromPenalties() {
+  var s = strengthFromPenalties();
+  if (s !== state.currentStrength) setStrength(s);
+  else renderStrengthBar();
 }
 
 function penaltyDurLabel(sec) {
@@ -2219,15 +2330,32 @@ function penaltyDurLabel(sec) {
 function addActivePenalty(evt) {
   if (!state.activeGame || !evt) return;
   if (!state.activeGame.activePenalties) state.activeGame.activePenalties = [];
+  var list = state.activeGame.activePenalties;
   var who = evt.playerJersey ? ('#' + evt.playerJersey)
           : (evt.team === 'opponent' ? 'Opp In-Home' : 'In-Home');
-  state.activeGame.activePenalties.push({
+  var entry = {
     id: evt.id,
     team: evt.team,
     label: who + ' ' + (evt.penName || 'Penalty') + ' ' + penaltyDurLabel(evt.penDuration || 0),
-    locked: !!evt.locked
-  });
-  renderActivePenalties();
+    locked: !!evt.locked,
+    duration: evt.penDuration || 0,
+    startQ: evt.quarter,
+    startClock: clockToSeconds(evt.penClock),
+    lockedSecs: 0
+  };
+  // Simultaneous fouls (both teams, same quarter, same clock reading): the
+  // overlapping time cannot be released by a goal, for either team's player.
+  if (entry.startClock !== null) {
+    list.forEach(function(o) {
+      if (o.team !== entry.team && o.startQ === entry.startQ && o.startClock === entry.startClock) {
+        var overlap = Math.min(o.duration, entry.duration);
+        o.lockedSecs = Math.max(o.lockedSecs || 0, overlap);
+        entry.lockedSecs = Math.max(entry.lockedSecs, overlap);
+      }
+    });
+  }
+  list.push(entry);
+  syncStrengthFromPenalties();
 }
 
 function removeActivePenalty(eventId) {
@@ -2235,20 +2363,27 @@ function removeActivePenalty(eventId) {
   state.activeGame.activePenalties = state.activeGame.activePenalties.filter(function(p) {
     return p.id !== eventId;
   });
-  renderActivePenalties();
+  syncStrengthFromPenalties();
 }
 
-function clearActivePenalties() {
-  if (!state.activeGame) return;
-  state.activeGame.activePenalties = [];
+// Scorekeeper taps "Served" on one penalty.
+function servePenalty(eventId) {
+  removeActivePenalty(eventId);
   saveState();
-  renderActivePenalties();
+}
+
+function clearAllPenalties() {
+  if (!activePenaltyList().length) return;
+  if (!window.confirm('Clear ALL active penalties, including locked ones?')) return;
+  state.activeGame.activePenalties = [];
+  syncStrengthFromPenalties();
+  saveState();
 }
 
 function renderActivePenalties() {
   var box = document.getElementById('activePenalties');
   if (!box) return;
-  var list = (state.activeGame && state.activeGame.activePenalties) || [];
+  var list = activePenaltyList();
   if (!list.length) {
     box.style.display = 'none';
     box.innerHTML = '';
@@ -2256,32 +2391,46 @@ function renderActivePenalties() {
   }
   box.style.display = 'block';
   box.innerHTML = '';
-  var title = document.createElement('div');
+
+  var head = document.createElement('div');
+  head.className = 'ap-head';
+  var title = document.createElement('span');
   title.className = 'ap-title';
-  title.textContent = 'Active penalties (tap EVEN to clear)';
-  box.appendChild(title);
+  title.textContent = 'Active penalties';
+  head.appendChild(title);
+  var clearAll = document.createElement('button');
+  clearAll.className = 'ap-clear-all';
+  clearAll.textContent = 'Clear all';
+  clearAll.addEventListener('click', clearAllPenalties);
+  head.appendChild(clearAll);
+  box.appendChild(head);
+
   [['tigers', 'Tigers'], ['opponent', 'Opponent']].forEach(function(t) {
     var mine = list.filter(function(p) { return p.team === t[0]; });
     if (!mine.length) return;
     var line = document.createElement('div');
     line.className = 'ap-line';
-    var team = document.createElement('span');
+    var team = document.createElement('div');
     team.className = 'ap-team';
-    team.textContent = t[1] + ':';
+    team.textContent = t[1];
     line.appendChild(team);
-    var txt = document.createElement('span');
-    mine.forEach(function(p, i) {
-      var item = document.createElement('span');
-      item.textContent = (i ? ', ' : '') + p.label;
-      txt.appendChild(item);
-      if (p.locked) {
-        var lk = document.createElement('span');
-        lk.className = 'ap-locked';
-        lk.textContent = ' (LOCKED)';
-        txt.appendChild(lk);
-      }
+    mine.forEach(function(p) {
+      var chip = document.createElement('div');
+      chip.className = 'ap-chip' + (p.locked ? ' is-locked' : '');
+      var txt = document.createElement('span');
+      txt.className = 'ap-chip-text';
+      var note = '';
+      if (p.locked) note = ' (LOCKED)';
+      else if (p.lockedSecs > 0) note = ' (overlap ' + p.lockedSecs + 's locked)';
+      txt.textContent = p.label + note;
+      chip.appendChild(txt);
+      var served = document.createElement('button');
+      served.className = 'ap-served';
+      served.textContent = 'Served';
+      served.addEventListener('click', function() { servePenalty(p.id); });
+      chip.appendChild(served);
+      line.appendChild(chip);
     });
-    line.appendChild(txt);
     box.appendChild(line);
   });
 }
@@ -3560,7 +3709,6 @@ function logOpponentPenalty(isInHome, durationSeconds) {
   };
   state.activeGame.events.push(evt);
   addActivePenalty(evt);
-  setStrength('Man-Up');
   saveState();
   renderEventLog();
 
@@ -3572,8 +3720,7 @@ function logOpponentPenalty(isInHome, durationSeconds) {
   closePenaltyModal();
   var who = isInHome ? 'Opp In-Home ' : ('Opp #' + jersey + ' ');
   var durLabel = durationSeconds >= 60 ? (durationSeconds / 60) + ' min' : durationSeconds + 's';
-  showToast(who + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + (evt.locked ? ', locked in' : '') + ') - Man-Up', 'warning');
-
+  showToast(who + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + (evt.locked ? ', locked in' : '') + ') - ' + state.currentStrength, 'warning');
   maybeEject('Opp #' + jersey, isInHome);
 }
 
@@ -3629,12 +3776,11 @@ function logTigersPenalty(durationSeconds) {
     };
     state.activeGame.events.push(evtIH);
     addActivePenalty(evtIH);
-    setStrength('Man-Down');
     saveState();
     renderEventLog();
     closePenaltyModal();
     var durLabelIH = durationSeconds >= 60 ? (durationSeconds / 60) + ' min' : durationSeconds + 's';
-    showToast('In-Home ' + state.penaltyName + ' (' + durLabelIH + ', ' + state.currentQuarter + ' ' + state.penaltyClock + ') - Man-Down', 'warning');
+    showToast('In-Home ' + state.penaltyName + ' (' + durLabelIH + ', ' + state.currentQuarter + ' ' + state.penaltyClock + ') - ' + state.currentStrength, 'warning');
     return;
   }
 
@@ -3671,14 +3817,13 @@ function logTigersPenalty(durationSeconds) {
     accumulatePersonalFoul(player.Player_ID, durationSeconds);
   }
 
-  // Switch to Man-Down
-  setStrength('Man-Down');
+  // Strength is worked out from the active penalty list (see addActivePenalty).
   saveState();
   renderEventLog();
   closePenaltyModal();
 
   var durLabel = durationSeconds >= 60 ? (durationSeconds / 60) + ' min' : durationSeconds + 's';
-  showToast('#' + player.Jersey + ' ' + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + (evt.locked ? ', locked in' : '') + ') - Man-Down', 'warning');
+  showToast('#' + player.Jersey + ' ' + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + (evt.locked ? ', locked in' : '') + ') - ' + state.currentStrength, 'warning');
 
   maybeEject(player.Player_ID, false);
 }
