@@ -89,7 +89,66 @@ You're now ready to score the game. 🥍
 
 ---
 
-## Part 3 — Saving the game (the PIN)
+## Part 3 — Scoring the game
+
+The app works the way stats are called out: **Stat, Player, Time (only if needed)**.
+For example: "Ground ball, number 3." Or: "Goal, number 27, assisted by number 9,
+time 11:15."
+
+On the **Game** tab, make sure **By Stat** is selected at the top of the screen.
+
+### Recording a stat
+
+1. Tap the stat (for example **Ground Ball**).
+2. Tap the jersey number on the keypad (one or two digits), then tap **OK**.
+
+That's it. The stat shows up in the Event Log at the bottom of the screen.
+
+| Stat | What happens after you enter the jersey |
+|---|---|
+| Ground Ball, Turnover, Caused Turnover, Interception | Recorded right away |
+| Face Off Won, Face Off Lost | Recorded right away |
+| Save | Recorded right away (goalies only) |
+| Goal Allowed | Asks for the time on the clock (goalies only) |
+| Shot | Asks where the shot was taken from |
+| Shot on Goal | Counts a shot too. Asks where the shot was taken from |
+
+> **Shot location is the least important detail.** If you missed it, tap **Skip**.
+
+### Recording a goal
+
+Enter it in the same order it is called out:
+
+1. Tap **Goal**.
+2. Enter the **scorer's** jersey number, tap **OK**.
+3. Enter the **assist** jersey number and tap **OK**, or tap **No Assist**.
+4. Enter the **time on the clock** as four digits (for example **0934** for 9:34), tap **OK**.
+   The time is required for every goal.
+5. Tap the **shot location**, or tap **Skip**.
+
+The goal also counts as a shot and a shot on goal automatically. Do not enter those
+separately. Nothing is saved until the last step, so if you tap **Cancel** before
+then, no goal is recorded.
+
+### If the app says a jersey number doesn't exist
+
+The message "Jersey # doesn't exist on the roster" means that number is not on
+your roster. Tap **Re-enter** to try again, or **Cancel**. If the number is right,
+the roster may be out of date. Pull it again (see Part 2).
+
+### Other options
+
+- **Jersey Grid:** if you would rather tap a player than type a number, tap
+  **Jersey Grid** at the top of the jersey screen. The app remembers your choice
+  on this device. Tap **Keypad** to switch back.
+- **By Player:** tap **By Player** at the top of the Game tab to see player cards.
+  Tap a player first, then the stat.
+- **Penalties and ejections:** use the **PENALTY** and **EJECTION** buttons, same
+  as always.
+- **Fixing a mistake:** find the entry in the Event Log and tap **Undo**.
+
+---
+## Part 4 — Saving the game (the PIN)
 
 When the game ends and you save it to the team sheet, the app will ask for the
 **Stats PIN** the first time on your device.
@@ -114,6 +173,7 @@ If you ever mistype it or need to change it:
 | Roster is empty | Tap **Roster** → **Pull Roster from Sheets**. |
 | **Test Connection** fails | Re-paste the **full** Script Link (they get cut off easily), tap **Save**, try again. |
 | App looks like an old version | Fully close the browser and reopen it. |
+| "Jersey # doesn't exist on the roster" | That number is not on the roster. Tap **Re-enter**, or pull the roster again if it is out of date. |
 | Game won't save / asks for PIN | Type the **Stats PIN** I sent you. If rejected, use **Settings → Stats PIN → Change / Clear Saved PIN** and re-enter it. |
 
 ---
@@ -123,6 +183,7 @@ If you ever mistype it or need to change it:
 - [ ] App opens and shows the four tabs
 - [ ] Roster is loaded and current
 - [ ] Opponent, date, and location entered on the **Game** tab
+- [ ] **By Stat** is selected on the Game tab
 - [ ] Stats PIN handy for saving at the end
 
 **Questions or anything looks off? Contact [your name / phone / email].**
