@@ -835,6 +835,7 @@ body {
   gap: 8px;
 }
 .by-stat-grid .stat-btn { font-size: 0.8rem; }
+.by-stat-grid .stat-btn.goal { grid-column: 1 / -1; font-size: 0.95rem; }
 .stat-btn.goalie-stat { border-color: var(--yellow); }
 .sf-error {
   background: var(--bg-secondary);
@@ -1101,6 +1102,7 @@ body {
     <div class="by-stat-panel" id="byStatPanel">
       <div class="label">By Stat &mdash; tap the stat, then enter the jersey</div>
       <div class="by-stat-grid">
+        <button class="stat-btn goal" onclick="sfStartStat('Goal')">Goal</button>
         <button class="stat-btn" onclick="sfStartStat('Shot')">Shot</button>
         <button class="stat-btn" onclick="sfStartStat('SOG')">Shot on Goal</button>
         <button class="stat-btn" onclick="sfStartStat('GB')">Ground Ball</button>
@@ -1238,6 +1240,7 @@ body {
 <div class="modal-overlay" id="sfJerseyModal">
   <div class="modal">
     <h3 id="sfJerseyTitle">Stat</h3>
+    <div id="sfGoalSummary" style="display:none; font-size:0.85rem; color:var(--green); font-weight:700; margin-bottom:6px;"></div>
     <p id="sfJerseyPrompt" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">Jersey # (tap digits, then OK):</p>
     <div class="sf-error" id="sfJerseyError" style="display:none;">
       <div id="sfJerseyErrorMsg"></div>
@@ -1262,7 +1265,26 @@ body {
         <button class="pen-key" onclick="sfJerseyDigit('0')">0</button>
         <button class="pen-key" id="sfJerseyOk" onclick="sfJerseyConfirm()" style="opacity:0.4;">OK</button>
       </div>
+      <button class="btn btn-secondary" id="sfNoAssistBtn" onclick="sfNoAssist()" style="display:none; width:100%; margin-top:12px;">No Assist</button>
       <button class="btn btn-secondary" onclick="sfCancel()" style="width:100%; margin-top:12px;">Cancel</button>
+    </div>
+    <div id="sfClockEntry" style="display:none;">
+      <div class="pen-clock-display" id="sfClockDisplay"><span class="pen-clock-empty">--:--</span></div>
+      <div class="pen-keypad">
+        <button class="pen-key" onclick="sfClockDigit('1')">1</button>
+        <button class="pen-key" onclick="sfClockDigit('2')">2</button>
+        <button class="pen-key" onclick="sfClockDigit('3')">3</button>
+        <button class="pen-key" onclick="sfClockDigit('4')">4</button>
+        <button class="pen-key" onclick="sfClockDigit('5')">5</button>
+        <button class="pen-key" onclick="sfClockDigit('6')">6</button>
+        <button class="pen-key" onclick="sfClockDigit('7')">7</button>
+        <button class="pen-key" onclick="sfClockDigit('8')">8</button>
+        <button class="pen-key" onclick="sfClockDigit('9')">9</button>
+        <button class="pen-key pen-key-back" onclick="sfClockBack()">&#9003;</button>
+        <button class="pen-key" onclick="sfClockDigit('0')">0</button>
+        <button class="pen-key" id="sfClockOk" onclick="sfClockConfirm()" style="opacity:0.4;">OK</button>
+      </div>
+      <button class="btn btn-secondary" onclick="sfCancel()" style="width:100%; margin-top:12px;">Cancel goal</button>
     </div>
   </div>
 </div>
@@ -2196,7 +2218,10 @@ var SF_LABELS = {
   Shot: 'Shot', SOG: 'Shot on Goal', Goal: 'Goal'
 };
 var SF_GOALIE_ONLY = { Save: true, GA: true };
-var sfState = { metric: null, digits: '' };
+// step: 'player' (any stat), then for Goal: 'assist' -> 'clock' -> zone picker.
+// A Goal is recorded only after the zone screen, so Cancel at any earlier
+// step leaves nothing behind.
+var sfState = { metric: null, step: 'player', digits: '', clock: '', scorer: null, assister: null };
 
 function sfStartStat(metric) {
   if (!state.activeGame) {
@@ -2204,24 +2229,59 @@ function sfStartStat(metric) {
     return;
   }
   sfState.metric = metric;
-  sfState.digits = '';
+  sfState.scorer = null;
+  sfState.assister = null;
+  sfState.clock = '';
   document.getElementById('sfJerseyTitle').textContent = SF_LABELS[metric] || metric;
-  document.getElementById('sfJerseyPrompt').textContent = SF_GOALIE_ONLY[metric]
-    ? 'Goalie jersey # (tap digits, then OK):'
-    : 'Jersey # (tap digits, then OK):';
-  sfShowEntry();
+  sfGoToStep('player');
   document.getElementById('sfJerseyModal').classList.add('show');
 }
 
+function sfGoToStep(step) {
+  sfState.step = step;
+  sfState.digits = '';
+  var prompt = document.getElementById('sfJerseyPrompt');
+  if (step === 'player') {
+    if (sfState.metric === 'Goal') prompt.textContent = 'Scorer jersey # (tap digits, then OK):';
+    else if (SF_GOALIE_ONLY[sfState.metric]) prompt.textContent = 'Goalie jersey # (tap digits, then OK):';
+    else prompt.textContent = 'Jersey # (tap digits, then OK):';
+  } else if (step === 'assist') {
+    prompt.textContent = 'Assisted by jersey # (tap digits, then OK), or No Assist:';
+  } else if (step === 'clock') {
+    prompt.textContent = 'Time on the clock (tap 4 digits, e.g. 0 9 3 4 = 09:34):';
+  }
+  document.getElementById('sfNoAssistBtn').style.display = (step === 'assist') ? 'block' : 'none';
+  sfUpdateSummary();
+  sfShowEntry();
+}
+
+function sfUpdateSummary() {
+  var el = document.getElementById('sfGoalSummary');
+  if (sfState.metric !== 'Goal' || !sfState.scorer) {
+    el.style.display = 'none';
+    return;
+  }
+  var txt = 'Goal #' + sfState.scorer.Jersey;
+  if (sfState.step === 'clock') {
+    txt += sfState.assister ? ', assisted by #' + sfState.assister.Jersey : ', no assist';
+  }
+  el.textContent = txt;
+  el.style.display = 'block';
+}
+
 function sfShowEntry() {
+  var isClock = (sfState.step === 'clock');
   document.getElementById('sfJerseyError').style.display = 'none';
-  document.getElementById('sfJerseyEntry').style.display = 'block';
+  document.getElementById('sfJerseyEntry').style.display = isClock ? 'none' : 'block';
+  document.getElementById('sfClockEntry').style.display = isClock ? 'block' : 'none';
   sfUpdateJerseyDisplay();
+  sfUpdateClockDisplay();
 }
 
 function sfShowError(msg) {
   document.getElementById('sfJerseyErrorMsg').textContent = msg;
   document.getElementById('sfJerseyEntry').style.display = 'none';
+  document.getElementById('sfClockEntry').style.display = 'none';
   document.getElementById('sfJerseyError').style.display = 'block';
 }
 
@@ -2246,6 +2306,7 @@ function sfJerseyBack() {
   sfUpdateJerseyDisplay();
 }
 
+// Re-enter keeps the current step (scorer, assist or clock).
 function sfJerseyReenter() {
   sfState.digits = '';
   sfShowEntry();
@@ -2271,13 +2332,82 @@ function sfJerseyConfirm() {
     sfShowError('#' + jersey + ' has been ejected and can\u2019t be credited. Re-enter or cancel.');
     return;
   }
+  if (sfState.step === 'assist') {
+    if (player.Player_ID === sfState.scorer.Player_ID) {
+      sfShowError('#' + jersey + ' scored the goal and can\u2019t assist it. Re-enter or cancel.');
+      return;
+    }
+    sfState.assister = player;
+    sfGoToStep('clock');
+    return;
+  }
   if (SF_GOALIE_ONLY[sfState.metric] && player.Position !== 'Goalie') {
     sfShowError('#' + jersey + ' is not a goalie. ' + (SF_LABELS[sfState.metric]) + ' is for goalies only. Re-enter or cancel.');
+    return;
+  }
+  if (sfState.metric === 'Goal') {
+    sfState.scorer = player;
+    sfGoToStep('assist');
     return;
   }
   var metric = sfState.metric;
   sfClose();
   logStat(metric, player);
+}
+
+function sfNoAssist() {
+  if (sfState.step !== 'assist') return;
+  sfState.assister = null;
+  sfGoToStep('clock');
+}
+
+// --- Goal clock (mandatory). Same rules as the existing goal clock. ---
+function sfUpdateClockDisplay() {
+  var d = sfState.clock;
+  var disp = document.getElementById('sfClockDisplay');
+  if (d.length === 0) {
+    disp.innerHTML = '<span class="pen-clock-empty">--:--</span>';
+  } else {
+    var padded = (d + '____').slice(0, 4);
+    disp.textContent = padded.slice(0, 2).replace(/_/g, '\u2013') + ':' + padded.slice(2, 4).replace(/_/g, '\u2013');
+  }
+  document.getElementById('sfClockOk').style.opacity = (d.length === 4) ? '1' : '0.4';
+}
+
+function sfClockDigit(n) {
+  if (sfState.clock.length >= 4) return;
+  var next = sfState.clock + n;
+  if (next.length === 2 && parseInt(next, 10) > 12) {
+    showToast('Minutes cannot exceed 12', 'error');
+    return;
+  }
+  if (next.length === 4 && parseInt(next.slice(2, 4), 10) > 59) {
+    showToast('Seconds cannot exceed 59', 'error');
+    return;
+  }
+  sfState.clock = next;
+  sfUpdateClockDisplay();
+}
+
+function sfClockBack() {
+  sfState.clock = sfState.clock.slice(0, -1);
+  sfUpdateClockDisplay();
+}
+
+function sfClockConfirm() {
+  if (sfState.clock.length !== 4) {
+    showToast('Enter all 4 digits', 'error');
+    return;
+  }
+  // Capture everything, close the keypad, then ask for the zone (last).
+  var scorer = sfState.scorer;
+  var assister = sfState.assister;
+  var clock = sfState.clock.slice(0, 2) + ':' + sfState.clock.slice(2, 4);
+  sfClose();
+  openZonePicker(function(zid) {
+    // Zone picked or skipped: now record the whole goal at once.
+    logStat('Goal', scorer, { zone: zid || '', clock: clock, assister: assister });
+  });
 }
 
 function sfCancel() {
@@ -2287,7 +2417,11 @@ function sfCancel() {
 function sfClose() {
   document.getElementById('sfJerseyModal').classList.remove('show');
   sfState.metric = null;
+  sfState.step = 'player';
   sfState.digits = '';
+  sfState.clock = '';
+  sfState.scorer = null;
+  sfState.assister = null;
 }
 
 // ============================================================
@@ -2404,10 +2538,12 @@ function applyZoneToLastShot(scorerId, zid, startIndex) {
   renderEventLog();
 }
 
-// logStat(metric, playerArg)
+// logStat(metric, playerArg, opts)
 // playerArg is optional. The stat-first flow passes the player directly; the
 // player-first flow (stat modal) omits it and falls back to selectedPlayer.
-function logStat(metric, playerArg) {
+// opts (stat-first Goal only): { zone, clock, assister } already collected,
+// so the goal is stamped in one pass and no follow-up prompts are shown.
+function logStat(metric, playerArg, opts) {
   var player = playerArg || selectedPlayer;
   if (!player || !state.activeGame) return;
 
@@ -2594,6 +2730,24 @@ function logStat(metric, playerArg) {
   closeStatModal();
   renderEventLog();
   showToast('#' + scorerJersey + ' ' + metric, 'success');
+
+  // Stat-first Goal: everything was collected up front (scorer, assist,
+  // clock, zone), so stamp it all now instead of prompting.
+  if (opts && metric === 'Goal') {
+    applyZoneToLastShot(scorerId, opts.zone, zoneStartIndex);
+    var sfGoalIds = goalEventIdsSince(scorerId, zoneStartIndex);
+    state.activeGame.events.forEach(function(e) {
+      if (sfGoalIds.indexOf(e.id) === -1) return;
+      e.gameClock = opts.clock;
+      if (opts.assister) e.linkedPlayerId = opts.assister.Player_ID;
+    });
+    saveState();
+    renderEventLog();
+    showToast('Goal #' + scorerJersey
+      + (opts.assister ? ', assist #' + opts.assister.Jersey : ', no assist')
+      + ', ' + state.currentQuarter + ' ' + opts.clock, 'success');
+    return;
+  }
 
   // v3: for any shot-family action, prompt once for the shot zone.
   // Applies to the Shot and Goal events in this cascade only (SOG left blank).
