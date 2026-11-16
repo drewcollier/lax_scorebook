@@ -819,6 +819,27 @@ body {
 .pen-key:active { background: var(--red); }
 .pen-key.pen-key-back { color: var(--orange); }
 
+/* V3.22 penalty lock-in checkbox (Personal fouls only) */
+.pen-lock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--yellow);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--white);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pen-lock-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  accent-color: var(--red);
+}
+
 /* V3.20 stat-first entry: "By Stat" panel + jersey keypad */
 .by-stat-panel { margin-bottom: 12px; }
 .by-stat-panel .label {
@@ -1396,6 +1417,10 @@ body {
     </div>
     <div id="penaltyStepDuration" style="display:none;">
       <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;"><span id="penDurationLabel" style="color:var(--white); font-weight:700;"></span> &middot; Duration:</p>
+      <label id="penLockRow" class="pen-lock-row" style="display:none;">
+        <input type="checkbox" id="penLockCheck">
+        <span><strong>Locked in</strong> (a goal will not release this penalty)</span>
+      </label>
       <div class="duration-grid">
         <button class="duration-btn" onclick="penaltySelectDuration(30)">30s</button>
         <button class="duration-btn" onclick="penaltySelectDuration(60)">1 min</button>
@@ -3357,6 +3382,11 @@ function buildPenNameGrid(elId, names, type, cssClass) {
 function penaltySelectName(name, type) {
   state.penaltyName = name;
   state.penaltyType = type;
+  // Lock-in only applies to Personal fouls. Reset it every time.
+  var lockCheck = document.getElementById('penLockCheck');
+  if (lockCheck) lockCheck.checked = false;
+  var lockRow = document.getElementById('penLockRow');
+  if (lockRow) lockRow.style.display = (type === 'Personal') ? 'flex' : 'none';
   // Both teams now go to the duration step.
   document.getElementById('penDurationLabel').textContent =
     penaltyWhoLabel() + ' \u00b7 ' + name + ' (' + type + ') \u00b7 ' + state.currentQuarter + ' ' + state.penaltyClock;
@@ -3364,6 +3394,12 @@ function penaltySelectName(name, type) {
 }
 
 // Duration chosen — route to the correct logger.
+// Lock-in: only a Personal foul can be locked in, and only if the box is ticked.
+function penaltyLockedFlag() {
+  var cb = document.getElementById('penLockCheck');
+  return state.penaltyType === 'Personal' && !!(cb && cb.checked);
+}
+
 function penaltySelectDuration(durationSeconds) {
   state.penaltyDuration = durationSeconds;
   if (state.penaltyTeam === 'opponent') {
@@ -3410,6 +3446,7 @@ function logOpponentPenalty(isInHome, durationSeconds) {
     penClock: state.penaltyClock,
     penName: state.penaltyName,
     penType: isInHome ? 'Technical' : state.penaltyType,
+    locked: !isInHome && penaltyLockedFlag(),
     team: 'opponent'
   };
   state.activeGame.events.push(evt);
@@ -3425,7 +3462,7 @@ function logOpponentPenalty(isInHome, durationSeconds) {
   closePenaltyModal();
   var who = isInHome ? 'Opp In-Home ' : ('Opp #' + jersey + ' ');
   var durLabel = durationSeconds >= 60 ? (durationSeconds / 60) + ' min' : durationSeconds + 's';
-  showToast(who + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + ') - Man-Up', 'warning');
+  showToast(who + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + (evt.locked ? ', locked in' : '') + ') - Man-Up', 'warning');
 
   maybeEject('Opp #' + jersey, isInHome);
 }
@@ -3505,6 +3542,7 @@ function logTigersPenalty(durationSeconds) {
     penClock: state.penaltyClock,
     penName: state.penaltyName,
     penType: state.penaltyType,
+    locked: penaltyLockedFlag(),
     team: 'tigers'
   };
 
@@ -3528,7 +3566,7 @@ function logTigersPenalty(durationSeconds) {
   closePenaltyModal();
 
   var durLabel = durationSeconds >= 60 ? (durationSeconds / 60) + ' min' : durationSeconds + 's';
-  showToast('#' + player.Jersey + ' ' + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + ') - Man-Down', 'warning');
+  showToast('#' + player.Jersey + ' ' + state.penaltyName + ' (' + durLabel + ', ' + state.currentQuarter + ' ' + state.penaltyClock + (evt.locked ? ', locked in' : '') + ') - Man-Down', 'warning');
 
   maybeEject(player.Player_ID, false);
 }
@@ -3701,6 +3739,9 @@ function renderEventLog() {
     }
     if (evt.metric === 'EMO_Success') {
       text = 'EMO: Success';
+    }
+    if (evt.metric === 'Penalty' && evt.locked) {
+      text += ' - LOCKED IN';
     }
     if (evt.metric === 'EMO_Fail') {
       text = 'EMO: Fail';
