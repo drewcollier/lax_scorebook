@@ -154,6 +154,47 @@ the roster may be out of date. Pull it again (see Part 2).
 
 ![A jersey number that is not on the roster](guide-images/error.png)
 
+### Penalties
+
+Penalties work in the same order as everything else.
+
+1. Tap **PENALTY** and pick the team (and the player for the Tigers).
+2. Enter the **time on the clock** when the penalty was called (four digits, for
+   example **0845**). Take care with this one. The app uses it to work out how
+   much of the penalty has been served.
+3. Pick the penalty, then the **duration**.
+4. For a **personal foul**, a **Locked in** box appears. Tick it when the penalty
+   is non-releasable, which means a goal will **not** release it. Technical fouls
+   can never be locked.
+
+Every active penalty appears in the **Active penalties** box, under the quarter
+buttons.
+
+![The Active penalties box](guide-images/penalties.png)
+
+- **EVEN, MAN-UP and MAN-DOWN are indicators, not buttons.** The app works them
+  out from the penalties in the box, so you never tap them. If both teams have a
+  penalty it shows **EVEN (1 v 1)**. Two penalties against one team shows
+  **MAN-DOWN (2)**.
+- **When a penalty ends, tap Served** next to it. The app does not run a clock, so
+  it relies on you for this. **Clear all** removes every penalty and asks you to
+  confirm first.
+- **Penalties called at the same time against both teams** show "overlap locked".
+  The shared time cannot be released by a goal.
+
+### What a goal does to penalties
+
+After you enter the goal's time, the app compares it with when each penalty started.
+
+- Penalties on the team that was **scored on** are released, unless they are locked
+  or still inside their overlap time.
+- The team that **scored** keeps its own penalties.
+- If a penalty had already run out (you forgot to tap Served), a **"Penalty already
+  expired"** message appears. Tap **OK**. That goal is not counted as a man-up or
+  man-down goal, and the strength goes back to what is really left.
+- **Undo** on the goal puts back every penalty it released or cleared.
+- If you tap **Cancel (leave blank)** on the goal time, nothing is released.
+
 ### Other options
 
 - **Jersey Grid:** if you would rather tap a player than type a number, tap
@@ -161,8 +202,7 @@ the roster may be out of date. Pull it again (see Part 2).
   on this device. Tap **Keypad** to switch back.
 - **By Player:** tap **By Player** at the top of the Game tab to see player cards.
   Tap a player first, then the stat.
-- **Penalties and ejections:** use the **PENALTY** and **EJECTION** buttons, same
-  as always.
+- **Ejections:** use the **EJECTION** button, same as always.
 - **Fixing a mistake:** find the entry in the Event Log and tap **Undo**.
 
 ![Jersey Grid](guide-images/grid.png)
@@ -196,6 +236,8 @@ If you ever mistype it or need to change it:
 | **Test Connection** fails | Re-paste the **full** Script Link (they get cut off easily), tap **Save**, try again. |
 | App looks like an old version | Fully close the browser and reopen it. |
 | "Jersey # doesn't exist on the roster" | That number is not on the roster. Tap **Re-enter**, or pull the roster again if it is out of date. |
+| EVEN / MAN-UP / MAN-DOWN won't respond when tapped | They are indicators. Add or remove penalties in the **Active penalties** box and they update on their own. |
+| "Penalty already expired" message after a goal | A penalty had run out before the goal. Tap **OK**. Next time, tap **Served** when a penalty ends. |
 | Game won't save / asks for PIN | Type the **Stats PIN** I sent you. If rejected, use **Settings → Stats PIN → Change / Clear Saved PIN** and re-enter it. |
 
 ---
