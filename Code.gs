@@ -115,13 +115,22 @@ function handleGetRoster(callback) {
       Jersey: String(row[1]),
       Name: String(row[2]),
       Position: String(row[3]),
-      isStarter: row[4] === true || row[4] === 'TRUE' || row[4] === 'true' || row[4] === 1
+      isStarter: isStarterFlag_(row[4])
     });
   }
 
   var json = JSON.stringify({ success: true, players: players });
   return ContentService.createTextOutput(callback + '(' + json + ')')
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+// Starter column (E, header "isStarter"): a real checkbox (TRUE) or any of
+// X, Y, Yes, True, 1 (any capitalization, spaces ignored) marks a starter.
+// Blank, N, No, False, 0 or anything else is not a starter.
+function isStarterFlag_(v) {
+  if (v === true || v === 1) return true;
+  var s = String(v === null || v === undefined ? '' : v).trim().toLowerCase();
+  return s === 'x' || s === 'y' || s === 'yes' || s === 'true' || s === '1';
 }
 
 // ============================================================
