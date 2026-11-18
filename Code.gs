@@ -7,7 +7,8 @@
  *   - Who has access: Anyone
  *
  * Sheet ID: 18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64
- * Tabs used: Players, Officials, Games, Events, Game Log, Scoresheet Template
+ * Tabs used: Players, Officials, Games, Events, Game Log, Season Totals,
+ *   MaxPreps Export, Scoresheet Template, Viewers (+ the sign-up form's tab)
  */
 
 var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
@@ -20,8 +21,9 @@ var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
  *   3 = every data read needs the PIN too (sent in a POST body, never in a URL)
  *   4 = Season Totals written by the script; permanent player IDs (P001...)
  *   5 = MaxPreps Export tab written by the script (season to date)
+ *   6 = family sign-in for the stats viewer (email code, own player only)
  */
-var SCRIPT_VERSION = 5;
+var SCRIPT_VERSION = 6;
 
 /**
  * The scorekeeper PIN.
@@ -119,6 +121,11 @@ function routePost_(payload) {
   if (payload.test === true) {
     return { success: true, version: SCRIPT_VERSION, message: 'Connection successful! Scorebook is linked.' };
   }
+  // Family sign-in (stats viewer). These don't use the PIN; see FAMILY SIGN-IN.
+  if (payload.action === 'requestCode') return requestCode_(payload);
+  if (payload.action === 'verifyCode') return verifyCode_(payload);
+  if (payload.action === 'myStats') return myStats_(payload);
+  if (payload.action === 'signOut') return signOut_(payload);
   if (!PIN_ACTIONS[payload.action]) return { success: false, error: 'Unknown action' };
 
   var bad = pinError_(payload);
@@ -672,8 +679,9 @@ function assignPlayerIds_(ss) {
 function onEdit(e) {
   if (!e || !e.range) return;
   var sheet = e.range.getSheet();
-  if (sheet.getName() !== 'Players') return;
   var ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+  if (sheet.getName() === 'Viewers') { refreshViewers_(ss); return; }
+  if (sheet.getName() !== 'Players') return;
   assignPlayerIds_(ss);
   rebuildSeasonTotals_(ss);
   rebuildMaxPreps_(ss);
@@ -790,7 +798,15 @@ function onOpen() {
     .createMenu('Lacrosse Tools')
     .addItem('Generate Printable Scoresheet', 'generateScoresheetPDF')
     .addItem('Rebuild Stats (Game Log, Season Totals, MaxPreps)', 'rebuildStats')
+    .addSeparator()
+    .addItem('Check for new sign-ups (Viewers)', 'checkNewSignUps')
+    .addItem('Set up family sign-in', 'setupFamilySignIn')
     .addToUi();
+  // New sign-ups from the form show up in Viewers whenever the Sheet is opened.
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss.getSheetByName('Viewers')) syncFormResponses_(ss);
+  } catch (err) {}
 }
 
 function generateScoresheetPDF() {
@@ -1174,4 +1190,414 @@ function generateScoresheetPDF() {
 
   var htmlOutput = HtmlService.createHtmlOutput(html).setWidth(1180).setHeight(760);
   SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Fishers Tigers Lacrosse - Scoresheet Preview');
+}
+
+// ============================================================
+// FAMILY SIGN-IN (stats viewer)
+//
+// A family signs in with their email: the script emails a 6-digit code, and
+// once they type it in they see ONLY their own player's stats. Nothing else
+// about other players is ever sent to their device.
+//
+// Who may sign in is decided by the Viewers tab:
+//   Email | Player Name | Jersey | Who | Player_ID | Approved | Status | Notes | Submitted
+// Rows come from the sign-up Google Form (copied in by the script) or can be
+// typed by hand. The script fills Player_ID by matching the jersey and name to
+// the Players tab, and writes Status. Only rows with Approved checked count,
+// and at most 2 approved emails per player (a 3rd is unchecked automatically).
+// Unchecking Approved cuts that email off at once, even on a signed-in device.
+// ============================================================
+var VIEWER_HEADERS = ['Email', 'Player Name', 'Jersey', 'Who', 'Player_ID', 'Approved', 'Status', 'Notes', 'Submitted'];
+var MAX_VIEWERS_PER_PLAYER = 2;
+var CODE_MINUTES = 10;          // a code works this long
+var CODE_TRIES = 5;             // wrong guesses allowed per code
+var CODES_PER_15_MIN = 3;       // codes one email can ask for in 15 minutes
+var SESSION_DAYS = 30;          // a device stays signed in this long
+var SESSIONS_PER_EMAIL = 4;     // devices one email can have signed in at once
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normEmail_(e) { return String(e === null || e === undefined ? '' : e).trim().toLowerCase(); }
+function normName_(n) { return String(n === null || n === undefined ? '' : n).toLowerCase().replace(/[^a-z]+/g, ' ').trim(); }
+function normJersey_(j) { var m = String(j === null || j === undefined ? '' : j).match(/\d+/); return m ? String(parseInt(m[0], 10)) : ''; }
+
+function sha256_(s) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8);
+  return bytes.map(function(b) { var v = (b < 0 ? b + 256 : b).toString(16); return v.length === 1 ? '0' + v : v; }).join('');
+}
+function randomHex_() { return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, ''); }
+function randomCode_() {
+  var n = parseInt(Utilities.getUuid().replace(/-/g, '').slice(0, 12), 16) % 1000000;
+  var s = String(n);
+  while (s.length < 6) s = '0' + s;
+  return s;
+}
+
+// The Viewers tab (created with its headers if missing).
+function viewersSheet_(ss) {
+  var sh = ss.getSheetByName('Viewers');
+  if (!sh) {
+    sh = ss.insertSheet('Viewers');
+    sh.getRange(1, 1, 1, VIEWER_HEADERS.length).setValues([VIEWER_HEADERS]);
+    try { sh.setFrozenRows(1); sh.getRange(1, 1, 1, VIEWER_HEADERS.length).setFontWeight('bold'); } catch (e) {}
+  }
+  return sh;
+}
+
+// Reads the Viewers tab as objects (header names in row 1, any column order).
+function readViewers_(sh) {
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+  var col = {};
+  headers.forEach(function(h, i) { if (h) col[h] = i; });
+  var rows = [];
+  if (sh.getLastRow() >= 2) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, lastCol).getValues().forEach(function(r, i) {
+      var o = { row: i + 2 };
+      VIEWER_HEADERS.forEach(function(h) { o[h] = col.hasOwnProperty(h) ? r[col[h]] : ''; });
+      rows.push(o);
+    });
+  }
+  return { headers: headers, col: col, rows: rows };
+}
+
+function playersIndex_(ss) {
+  var sh = ss.getSheetByName('Players');
+  var list = [];
+  if (sh && sh.getLastRow() >= 2) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().forEach(function(r) {
+      var id = String(r[0]).trim();
+      if (PLAYER_ID_RE.test(id)) list.push({ id: id, jersey: normJersey_(r[1]), name: normName_(r[2]),
+        Name: String(r[2]), Jersey: String(r[1]), Position: String(r[3]) });
+    });
+  }
+  var byId = {};
+  list.forEach(function(p) { byId[p.id] = p; });
+  return { list: list, byId: byId };
+}
+
+// Finds the player a sign-up is for. Jersey + name must agree; if only one of
+// them matches a single player, that is used too but flagged for a look.
+function matchPlayer_(players, name, jersey) {
+  var n = normName_(name), j = normJersey_(jersey);
+  var last = n.split(' ').pop();
+  function nameOk(p) { return n && (p.name === n || (last && p.name.split(' ').pop() === last)); }
+  var byJ = players.list.filter(function(p) { return j && p.jersey === j; });
+  var both = byJ.filter(nameOk);
+  if (both.length === 1) return { id: both[0].id, sure: true };
+  var byN = players.list.filter(function(p) { return n && p.name === n; });
+  if (byN.length === 1) return { id: byN[0].id, sure: false, why: 'matched by name only - jersey #' + (j || '?') + ' did not match' };
+  if (byJ.length === 1 && !n) return { id: byJ[0].id, sure: false, why: 'matched by jersey only' };
+  return null;
+}
+
+// Works out every row's status. Pure: used both to update the tab and, without
+// writing anything, to decide who may sign in.
+function evaluateViewers_(rows, players) {
+  var approvedCount = {};
+  return rows.map(function(r) {
+    var email = normEmail_(r.Email);
+    var pid = String(r.Player_ID || '').trim();
+    var approved = r.Approved === true || String(r.Approved).toUpperCase() === 'TRUE';
+    var out = { row: r.row, email: email, pid: pid, approved: approved, active: false, uncheck: false, status: '' };
+    if (!email && !pid && !String(r['Player Name']).trim()) { out.status = ''; return out; }
+    if (!EMAIL_RE.test(email)) { out.status = 'Check the email address'; return out; }
+    if (!players.byId[pid]) {
+      out.status = 'Check the player: no match for ' + (r.Jersey ? '#' + r.Jersey + ' ' : '') + String(r['Player Name'] || '').trim() +
+        '. Fix Player Name/Jersey, or type the Player_ID (P###).';
+      return out;
+    }
+    if (!approved) { out.status = 'Waiting for approval'; return out; }
+    approvedCount[pid] = approvedCount[pid] || {};
+    if (!approvedCount[pid][email] && Object.keys(approvedCount[pid]).length >= MAX_VIEWERS_PER_PLAYER) {
+      out.uncheck = true; out.approved = false;
+      out.status = 'Not approved: ' + players.byId[pid].Name + ' already has ' + MAX_VIEWERS_PER_PLAYER + ' approved emails';
+      return out;
+    }
+    approvedCount[pid][email] = true;
+    out.active = true;
+    out.status = 'Active - can sign in';
+    return out;
+  });
+}
+
+// Fills missing Player_IDs and rewrites the Status column (and unchecks any
+// approval past the per-player limit). Runs when the Viewers tab is edited,
+// after new sign-ups are copied in, and when the Sheet is opened.
+function refreshViewers_(ss) {
+  var sh = viewersSheet_(ss);
+  var v = readViewers_(sh);
+  if (!v.rows.length || !v.col.hasOwnProperty('Player_ID') || !v.col.hasOwnProperty('Status')) return 0;
+  var players = playersIndex_(ss);
+  var notes = {};
+  v.rows.forEach(function(r) {
+    if (!players.byId[String(r.Player_ID || '').trim()]) {
+      var m = matchPlayer_(players, r['Player Name'], r.Jersey);
+      if (m) r.Player_ID = m.id;
+    }
+    var p = players.byId[String(r.Player_ID || '').trim()];
+    if (p) { // say so when the sign-up's jersey or name doesn't fit the player it's linked to
+      var j = normJersey_(r.Jersey), n = normName_(r['Player Name']);
+      var lastOk = n && p.name.split(' ').pop() === n.split(' ').pop();
+      if (j && j !== p.jersey) notes[r.row] = 'form said #' + j + ', ' + p.Name + ' is #' + p.jersey;
+      else if (n && !lastOk) notes[r.row] = 'form said ' + String(r['Player Name']).trim() + ', linked to ' + p.Name;
+    }
+  });
+  var ev = evaluateViewers_(v.rows, players);
+  var n = v.rows.length;
+  var pidCol = [], stCol = [], apCol = [];
+  ev.forEach(function(e, i) {
+    pidCol.push([v.rows[i].Player_ID || '']);
+    stCol.push([e.status + (notes[e.row] && e.status ? ' (' + notes[e.row] + ')' : '')]);
+    apCol.push([e.uncheck ? false : v.rows[i].Approved]);
+  });
+  sh.getRange(2, v.col.Player_ID + 1, n, 1).setValues(pidCol);
+  sh.getRange(2, v.col.Status + 1, n, 1).setValues(stCol);
+  if (v.col.hasOwnProperty('Approved')) {
+    var apRange = sh.getRange(2, v.col.Approved + 1, n, 1);
+    if (ev.some(function(e) { return e.uncheck; })) apRange.setValues(apCol);
+    try { apRange.insertCheckboxes(); } catch (e) {}
+  }
+  return n;
+}
+
+// Copies new answers from the sign-up Google Form (its "Form Responses" tab)
+// into Viewers, unapproved. Each copied answer is marked in a "Copied" column
+// on the form tab, so deleting a row from Viewers does not bring it back.
+// The form's questions are found by words in their titles: email, name,
+// jersey, and "player or parent".
+function syncFormResponses_(ss) {
+  var sheets = ss.getSheets ? ss.getSheets() : [];
+  var added = 0;
+  sheets.forEach(function(fs) {
+    if (!/^Form Responses/i.test(fs.getName()) || fs.getLastRow() < 2) return;
+    var lastCol = fs.getLastColumn();
+    var heads = fs.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var copiedCol = heads.indexOf('Copied');
+    if (copiedCol < 0) { copiedCol = lastCol; fs.getRange(1, copiedCol + 1).setValues([['Copied']]); }
+    function find(test) { for (var i = 0; i < heads.length; i++) if (i !== copiedCol && test(heads[i].toLowerCase())) return i; return -1; }
+    var cEmail = find(function(h) { return h.indexOf('email') >= 0; });
+    var cJersey = find(function(h) { return h.indexOf('jersey') >= 0 || h.indexOf('number') >= 0; });
+    var cWho = find(function(h) { return h.indexOf('parent') >= 0 || h.indexOf('who') >= 0 || h.indexOf('relationship') >= 0; });
+    var cName = -1;
+    for (var i = 0; i < heads.length; i++) {
+      var h = heads[i].toLowerCase();
+      if (i !== copiedCol && i !== cEmail && i !== cJersey && i !== cWho && h.indexOf('name') >= 0) { cName = i; break; }
+    }
+    var cTime = find(function(h) { return h.indexOf('timestamp') >= 0; });
+    if (cEmail < 0) return;
+    var n = fs.getLastRow() - 1;
+    var data = fs.getRange(2, 1, n, Math.max(lastCol, copiedCol + 1)).getValues();
+    var sh = viewersSheet_(ss);
+    var v = readViewers_(sh);
+    var marks = [], newRows = [];
+    data.forEach(function(r) {
+      var done = String(r[copiedCol] || '').trim() !== '';
+      if (!done && normEmail_(r[cEmail])) {
+        var row = {};
+        row.Email = normEmail_(r[cEmail]);
+        row['Player Name'] = cName >= 0 ? String(r[cName]).trim() : '';
+        row.Jersey = cJersey >= 0 ? normJersey_(r[cJersey]) : '';
+        row.Who = cWho >= 0 ? String(r[cWho]).trim() : '';
+        row.Submitted = cTime >= 0 ? r[cTime] : new Date();
+        row.Approved = false;
+        newRows.push(row);
+        done = true;
+      }
+      marks.push([done ? 'Yes' : '']);
+    });
+    if (newRows.length) {
+      var width = v.headers.length;
+      var start = sh.getLastRow() + 1;
+      ensureRows_(sh, start + newRows.length - 1);
+      sh.getRange(start, 1, newRows.length, width).setValues(newRows.map(function(o) {
+        return v.headers.map(function(h) { return o.hasOwnProperty(h) ? o[h] : ''; });
+      }));
+      added += newRows.length;
+    }
+    fs.getRange(2, copiedCol + 1, n, 1).setValues(marks);
+  });
+  if (added) refreshViewers_(ss);
+  return added;
+}
+
+// Player_IDs this email may see right now ([] if none).
+function playersForEmail_(ss, email) {
+  email = normEmail_(email);
+  if (!email) return [];
+  var sh = ss.getSheetByName('Viewers');
+  if (!sh) return [];
+  var players = playersIndex_(ss);
+  var ids = [];
+  evaluateViewers_(readViewers_(sh).rows, players).forEach(function(e) {
+    if (e.active && e.email === email && ids.indexOf(e.pid) < 0) ids.push(e.pid);
+  });
+  return ids;
+}
+
+// ---- sign-in steps (called from routePost_; no PIN involved) ----
+
+// Step 1: email a code. The reply is the same whether or not the email is
+// approved, so the page can't be used to find out who is on the list.
+function requestCode_(payload) {
+  var email = normEmail_(payload.email);
+  var sent = { success: true, message: 'If that email is approved, a code is on its way.' };
+  if (!EMAIL_RE.test(email)) return { success: false, error: 'BAD_EMAIL', message: 'Please enter a valid email address.' };
+  var cache = CacheService.getScriptCache();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    try { syncFormResponses_(ss); } catch (e) {}
+    var rateKey = 'R_' + sha256_(email);
+    var count = parseInt(cache.get(rateKey) || '0', 10);
+    if (count >= CODES_PER_15_MIN) {
+      return { success: false, error: 'TOO_MANY', message: 'Too many codes asked for. Wait 15 minutes, then try again.' };
+    }
+    if (!playersForEmail_(ss, email).length) return sent;
+    if (MailApp.getRemainingDailyQuota() < 1) {
+      return { success: false, error: 'MAIL_LIMIT', message: 'Sign-in emails are paused for today. Please try again tomorrow.' };
+    }
+    var code = randomCode_();
+    cache.put('C_' + sha256_(email), JSON.stringify({ h: sha256_(email + '|' + code), n: 0 }), CODE_MINUTES * 60);
+    cache.put(rateKey, String(count + 1), 15 * 60);
+    MailApp.sendEmail(email, 'Fishers Tigers stats sign-in code: ' + code,
+      'Your sign-in code for the Fishers Tigers Lacrosse stats viewer is:\n\n    ' + code + '\n\n' +
+      'It works for ' + CODE_MINUTES + ' minutes. If you didn\'t ask for this, you can ignore this email.\n\n' +
+      '- Fishers Tigers Lacrosse', { name: 'Fishers Tigers Lacrosse' });
+    return sent;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Step 2: check the code and hand back a sign-in token for this device.
+// Only a fingerprint (hash) of the token is kept in the script.
+function verifyCode_(payload) {
+  var email = normEmail_(payload.email);
+  var code = String(payload.code || '').replace(/\D/g, '');
+  var wrong = { success: false, error: 'BAD_CODE', message: 'That code is not right or has expired. Check it, or ask for a new code.' };
+  var cache = CacheService.getScriptCache();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var key = 'C_' + sha256_(email);
+    var rec = cache.get(key);
+    if (!rec) return wrong;
+    rec = JSON.parse(rec);
+    if (rec.h !== sha256_(email + '|' + code)) {
+      rec.n++;
+      if (rec.n >= CODE_TRIES) cache.remove(key); else cache.put(key, JSON.stringify(rec), CODE_MINUTES * 60);
+      return wrong;
+    }
+    cache.remove(key);
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    if (!playersForEmail_(ss, email).length) return { success: false, error: 'NOT_APPROVED', message: 'This email is not approved to view stats.' };
+    var token = randomHex_();
+    var props = PropertiesService.getScriptProperties();
+    var all = props.getProperties();
+    var now = Date.now(), mine = [];
+    Object.keys(all).forEach(function(k) {
+      if (k.indexOf('S_') !== 0) return;
+      var s; try { s = JSON.parse(all[k]); } catch (e) { s = null; }
+      if (!s || s.x < now) { props.deleteProperty(k); return; }
+      if (s.e === email) mine.push({ k: k, x: s.x });
+    });
+    mine.sort(function(a, b) { return a.x - b.x; });
+    while (mine.length >= SESSIONS_PER_EMAIL) props.deleteProperty(mine.shift().k);
+    props.setProperty('S_' + sha256_(token), JSON.stringify({ e: email, x: now + SESSION_DAYS * 86400000 }));
+    return { success: true, token: token, email: email };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// The email a token belongs to, or '' if it is unknown or expired.
+function sessionEmail_(token) {
+  token = String(token || '');
+  if (!/^[0-9a-f]{64}$/.test(token)) return '';
+  var raw = PropertiesService.getScriptProperties().getProperty('S_' + sha256_(token));
+  if (!raw) return '';
+  var s; try { s = JSON.parse(raw); } catch (e) { return ''; }
+  return (s && s.x > Date.now()) ? s.e : '';
+}
+
+function signOut_(payload) {
+  var token = String(payload.token || '');
+  if (/^[0-9a-f]{64}$/.test(token)) PropertiesService.getScriptProperties().deleteProperty('S_' + sha256_(token));
+  return { success: true };
+}
+
+var SEASON_KEYS = ['GP', 'G', 'A', 'Pts', 'S', 'SOG', 'Shooting %', 'GB', 'CT', 'TO', 'FW', 'FL', 'FO Win %',
+  'PEN', 'Pen Min', 'SV', 'GA', 'Save %', 'INT'];
+
+// Step 3: the signed-in family's stats - their own player(s) only.
+// Other players' IDs are blanked out of the plays (e.g. who scored a goal
+// their player assisted), so no one else's data leaves the script.
+function myStats_(payload) {
+  var email = sessionEmail_(payload.token);
+  if (!email) return { success: false, error: 'NOT_SIGNED_IN', message: 'Please sign in again.' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var ids = playersForEmail_(ss, email);
+  if (!ids.length) return { success: false, error: 'NOT_APPROVED', message: 'This email is no longer approved to view stats.' };
+  var mine = {};
+  ids.forEach(function(id) { mine[id] = true; });
+  var pi = playersIndex_(ss);
+  var players = ids.map(function(id) { var p = pi.byId[id]; return { Player_ID: id, Name: p.Name, Jersey: p.Jersey, Position: p.Position }; });
+
+  var all = getEvents_('');
+  var events = [];
+  (all.events || []).forEach(function(e) {
+    var p = mine[e.Primary_Player_ID], s = mine[e.Secondary_Player_ID];
+    if (!p && !s) return;
+    events.push({ Timestamp: e.Timestamp, Game_ID: e.Game_ID, Period: e.Period, Action_Type: e.Action_Type,
+      Primary_Player_ID: p ? e.Primary_Player_ID : '', Secondary_Player_ID: s ? e.Secondary_Player_ID : '',
+      Pen_Duration: e.Pen_Duration, Game_Clock: e.Game_Clock, Penalty_Type: e.Penalty_Type,
+      Penalty_Name: e.Penalty_Name, Zone_ID: e.Zone_ID });
+  });
+
+  var season = {};
+  var st = ss.getSheetByName('Season Totals');
+  if (st && st.getLastRow() >= 2) {
+    var vals = st.getDataRange().getValues();
+    var h = vals[0].map(String);
+    var idCol = h.indexOf('Player_ID');
+    vals.slice(1).forEach(function(r) {
+      var id = String(r[idCol]).trim();
+      if (!mine[id]) return;
+      var o = {};
+      SEASON_KEYS.forEach(function(k) { var i = h.indexOf(k); o[k] = i >= 0 ? r[i] : ''; });
+      season[id] = o;
+    });
+  }
+  var games = (getGames_().games || []).map(function(g) {
+    return { Game_ID: g.Game_ID, Date: g.Date, Opponent: g.Opponent, Location: g.Location, Score: g.Score, Game_Label: g.Game_Label };
+  });
+  return { success: true, email: email, players: players, games: games, events: events, season: season };
+}
+
+// Lacrosse Tools > Set up family sign-in. Run once: makes the Viewers tab and
+// asks Google for permission to send the code emails (a test email goes to
+// you). Safe to run again.
+function setupFamilySignIn() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SHEET_ID);
+  viewersSheet_(ss);
+  var added = syncFormResponses_(ss);
+  refreshViewers_(ss);
+  var me = Session.getEffectiveUser().getEmail();
+  var left = MailApp.getRemainingDailyQuota();
+  MailApp.sendEmail(me, 'Fishers Tigers stats: family sign-in is set up',
+    'This test email shows the scorebook script can send sign-in codes.\n\n' +
+    'Emails left today: ' + left + '.', { name: 'Fishers Tigers Lacrosse' });
+  SpreadsheetApp.getUi().alert('Family sign-in is set up.\n\n' +
+    'The Viewers tab is ready' + (added ? ' (' + added + ' new sign-up' + (added === 1 ? '' : 's') + ' copied in)' : '') + '.\n' +
+    'A test email was sent to ' + me + '.');
+}
+
+// Lacrosse Tools > Check for new sign-ups.
+function checkNewSignUps() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var added = syncFormResponses_(ss);
+  refreshViewers_(ss);
+  SpreadsheetApp.getUi().alert(added ? added + ' new sign-up' + (added === 1 ? '' : 's') + ' added to the Viewers tab. Check Approved to let them in.'
+    : 'No new sign-ups.');
 }

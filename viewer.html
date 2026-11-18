@@ -15,8 +15,65 @@
 
 <div class="wrap">
 
+  <!-- Family sign-in (email + 6-digit code) -->
+  <div class="card hide" id="signInCard">
+    <h2>Sign in to see your player's stats</h2>
+    <div id="emailStep">
+      <p class="note">Enter the email you signed up with. We'll email you a 6-digit code.</p>
+      <div class="row">
+        <div style="flex:3;">
+          <label class="fld" for="signEmail">Email</label>
+          <input type="email" id="signEmail" autocomplete="email" inputmode="email" placeholder="you@example.com"
+                 onkeydown="if(event.key==='Enter')requestCode()">
+        </div>
+        <div style="flex:0; display:flex; align-items:flex-end;">
+          <button class="btn" id="sendCodeBtn" onclick="requestCode()">Email me a code</button>
+        </div>
+      </div>
+    </div>
+    <div id="codeStep" class="hide">
+      <p class="note">If <b id="codeEmail"></b> is approved, a code is on its way. It can take a minute; check your spam folder too.</p>
+      <div class="row">
+        <div style="flex:3;">
+          <label class="fld" for="signCode">6-digit code</label>
+          <input type="text" id="signCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456"
+                 onkeydown="if(event.key==='Enter')verifyCode()">
+        </div>
+        <div style="flex:0; display:flex; align-items:flex-end; gap:6px;">
+          <button class="btn" id="verifyBtn" onclick="verifyCode()">Sign in</button>
+        </div>
+      </div>
+      <button class="link" onclick="showEmailStep()">Use a different email / send a new code</button>
+    </div>
+    <div class="status" id="signStatus"></div>
+    <p class="note small" id="signupNote">Not signed up yet? Ask the coach for the sign-up form.
+      Each player can have up to two emails (for example, the player and one parent).</p>
+    <p class="note small">Coach? <button class="link" onclick="startCoach()">Use the Stats PIN</button></p>
+  </div>
+
+  <!-- Who is signed in -->
+  <div class="card hide" id="whoCard">
+    <div class="who-row">
+      <div id="whoText"></div>
+      <select id="famPlayer" class="hide" onchange="onFamPlayerChange()"></select>
+      <button class="btn sec" id="signOutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Season totals + game by game (family view) -->
+  <div id="famCards" class="hide">
+    <div class="card">
+      <h2>Season Totals</h2>
+      <div id="seasonTable"></div>
+    </div>
+    <div class="card">
+      <h2>Game by Game</h2>
+      <div id="gameByGame"></div>
+    </div>
+  </div>
+
   <!-- Connection / game picker -->
-  <div class="card" id="setupCard">
+  <div class="card hide" id="setupCard">
     <h2>Game Selection</h2>
     <div id="urlRow" class="row hide">
       <div style="flex:3;">
@@ -34,7 +91,7 @@
       </div>
       <div style="flex:0; display:flex; align-items:flex-end; gap:6px;">
         <button class="btn sec" onclick="bootstrap()">Refresh</button>
-        <button class="btn sec" onclick="showUrl()">URL</button>
+        <button class="btn sec" id="urlBtn" onclick="showUrl()">URL</button>
       </div>
     </div>
     <div class="status" id="setupStatus"></div>
@@ -75,7 +132,7 @@
     </div>
 
     <!-- Individual scoring + team summary -->
-    <div class="row">
+    <div class="row" id="teamCards">
       <div class="card" style="flex:1; min-width:280px;">
         <h2>Individual Scoring</h2>
         <div id="scoringTable"></div>
