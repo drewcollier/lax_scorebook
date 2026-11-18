@@ -36,18 +36,29 @@ Never use **Deploy -> New deployment** for an update: that creates a brand-new
 link. To check it worked, open the app: **Settings -> Test Connection** shows
 the script version.
 
-## The Stats PIN
+## The Stats PIN and coach PINs
 
-One PIN protects everything the app reads from or saves to the workbook
-(roster, officials, games, play-by-play, saving a game). Only the version
-check and Test Connection answer without it.
+There are two kinds of PIN, both kept in the Apps Script (editor -> **Project
+Settings** -> **Script Properties**). Changes work immediately, no redeploy.
 
-- **Where it lives:** Apps Script editor -> **Project Settings** -> **Script
-  Properties** -> `WRITE_PIN`. Change it there; it works immediately, no redeploy.
+| Script Property | What it can do | Who has it |
+|---|---|---|
+| `WRITE_PIN` | Everything: save games, pull roster/officials, the viewer's coach view | Scorekeepers / you |
+| `VIEW_PINS` | **Look only**: the viewer's coach view (whole team) and pulling the roster. **Can't save games.** | Coaches |
+
+- `VIEW_PINS` can hold one PIN per coach, separated by commas (`4821, 7735`).
+  To cut one coach off, delete just their PIN. Leave `VIEW_PINS` out if unused.
+- **Lockout:** after 10 wrong PINs in a row, every PIN (even a right one) is
+  refused for 15 minutes, so nobody can guess PINs by trying thousands. A right
+  PIN resets the count. **Lacrosse Tools -> Clear PIN lockout** ends it early.
+  A game that couldn't save stays on the device; sync it afterwards.
+- Use PINs of 6+ digits, and don't reuse one PIN for two people.
 - **If `WRITE_PIN` is missing, the script refuses everything** (error
   `PIN_NOT_SET`), so a missing setting can never leave the stats open.
 - **On devices:** the app asks for the PIN every time and does not store it,
-  unless "Remember the PIN on this device" is ticked in Settings.
+  unless "Remember the PIN on this device" is ticked in Settings. The viewer
+  never stores a PIN.
+- Family email sign-in (below) doesn't use PINs and isn't affected by the lockout.
 
 ## The built-in script link
 

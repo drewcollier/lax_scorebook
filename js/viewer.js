@@ -8,7 +8,8 @@
 //  - Families sign in with their email + a 6-digit emailed code and see ONLY their
 //    own player (the script decides which player; it never sends anyone else's data).
 //    The sign-in token is kept on this device for 30 days; Sign out removes it.
-//  - The coach uses the Stats PIN for the whole team. The PIN is asked for each
+//  - Coaches use a PIN for the whole team: their own view-only coach PIN (VIEW_PINS
+//    in the script) or the scorebook's Stats PIN. The PIN is asked for each
 //    visit, kept only in memory, never stored and never put in a URL.
 var URL_KEY = 'lax_viewer_scriptUrl';
 var SESSION_KEY = 'lax_viewer_session';
@@ -51,13 +52,14 @@ function post(body, onOk, onErr) {
 function api(action, params, onOk, onErr) {
   if (!V.url) { showUrl(); setStatus('Enter the Apps Script URL first.'); return; }
   if (!V.pin) {
-    V.pin = (window.prompt('Enter the Stats PIN to view the whole team:') || '').trim();
+    V.pin = (window.prompt('Enter your coach PIN to view the whole team:') || '').trim();
     if (!V.pin) { setStatus('A PIN is needed for the coach view. Tap Refresh to try again.'); return; }
   }
   var body = { action: action, pin: V.pin };
   for (var k in params) body[k] = params[k];
   post(body, function(d){
     if (d && d.error === 'INVALID_PIN') { V.pin = ''; setStatus('Incorrect PIN. Tap Refresh to try again.'); return; }
+    if (d && d.error === 'PIN_LOCKED') { V.pin = ''; setStatus(d.message); return; }
     if (d && d.success === false && d.message) { setStatus(d.message); return; }
     onOk(d);
   }, onErr);
