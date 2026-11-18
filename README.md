@@ -74,3 +74,17 @@ History -> **Scoresheet** builds the one-page landscape scoresheet on the device
 **MaxPreps file** downloads that game's stats as a CSV in MaxPreps' column
 order. Both work offline. The Sheet's own *Lacrosse Tools -> Generate Printable
 Scoresheet* still works too.
+
+## Releasing a new version of the app
+
+1. Make the change in `index.html` (and/or `viewer.html`), bump the version
+   shown in the header (e.g. `V3.27`), and bump `CACHE_VERSION` in `sw.js`
+   (e.g. `lax-scorebook-v30` -> `v31`).
+2. Merge to `main`. GitHub Pages publishes it in a minute or two.
+3. Devices open the app instantly from their saved copy, download the new
+   version in the background, and show a blue **"A new version ... is ready -
+   Reload"** bar. Nothing reloads by itself, so a game in progress is never
+   interrupted.
+
+If you add a new file the app needs offline (an image, say), add it to
+`ASSETS` in `sw.js`.

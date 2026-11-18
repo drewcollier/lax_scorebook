@@ -2,13 +2,12 @@
   "short_name": "Tigers Lax",
   "name": "Fishers Tigers Lacrosse Scorebook",
   "icons": [
-    {
-      "src": "https://raw.githubusercontent.com/google/material-design-icons/master/png/sports/sports_sports_hockey/materialicons/48dp/2x/baseline_sports_hockey_black_48dp.png",
-      "type": "image/png",
-      "sizes": "96x96"
-    }
+    { "src": "icons/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
   ],
   "start_url": "./index.html",
+  "scope": "./",
   "background_color": "#1a1a2e",
   "theme_color": "#CC0000",
   "display": "standalone",

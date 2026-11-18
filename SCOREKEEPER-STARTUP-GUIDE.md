@@ -262,7 +262,8 @@ Open **History**. Each game has two buttons (no PIN or signal needed):
 | "No Apps Script link is set up" | Go to **Settings**, make sure the **Google Apps Script URL** box is **blank**, tap **Save**. |
 | Roster is empty | Tap **Roster** → **Pull Roster from Sheets**. |
 | **Test Connection** fails | Check your internet. Make sure the **Google Apps Script URL** box is blank (or holds the exact link you were given), tap **Save**, try again. |
-| App looks like an old version | Fully close the browser and reopen it. |
+| A blue bar says **"A new version of the scorebook is ready"** | Tap **Reload** when convenient (your game is saved). If you ignore it, the new version loads the next time you open the app. |
+| App looks like an old version | Close the app completely and open it again (it updates in the background, so the second open has the newest version). |
 | "Jersey # doesn't exist on the roster" | That number is not on the roster. Tap **Re-enter**, or pull the roster again if it is out of date. |
 | EVEN / MAN-UP / MAN-DOWN won't respond when tapped | They are indicators. Add or remove penalties in the **Active penalties** box and they update on their own. |
 | "Penalty already expired" message after a goal | A penalty had run out before the goal. Tap **OK**. Next time, tap **Served** when a penalty ends. |
