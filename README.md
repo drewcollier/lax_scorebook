@@ -38,12 +38,39 @@ check and Test Connection answer without it.
 
 ## The built-in script link
 
-`DEFAULT_SCRIPT_URL` near the top of the `<script>` in `index.html` and in
-`viewer.html` holds the team's web-app link (`https://script.google.com/macros/s/.../exec`),
-so scorekeepers don't paste anything. It is safe to have in this public repo
-because every request also needs the PIN. If the link ever changes (only if a
-*new* deployment is created), update it in both files. Settings -> Google Apps
-Script URL on a device overrides it for that device only.
+`DEFAULT_SCRIPT_URL` in **`js/config.js`** holds the team's web-app link
+(`https://script.google.com/macros/s/.../exec`); both the scorebook and the
+viewer read it from there, so scorekeepers don't paste anything. It is safe to
+have in this public repo because every request also needs the PIN. It only
+changes if a *new* deployment is created (updating with "New version" keeps
+it). Settings -> Google Apps Script URL on a device overrides it for that
+device only.
+
+## Code layout
+
+| File | What's in it |
+|---|---|
+| `index.html` | The scorebook's screens and pop-ups (markup only) |
+| `css/app.css` | All scorebook styles, including the printable scoresheet |
+| `js/config.js` | The built-in script link (shared with the viewer) |
+| `js/boot.js` | Offline support start-up, "new version" bar, storage protection |
+| `js/state.js` | App state, saving it on the device, helpers, tab switching |
+| `js/game.js` | Start/end game, Start-Game details, quarters, timeouts, EMO |
+| `js/active-penalties.js` | Active penalties box and what goals do to penalties |
+| `js/stat-entry.js` | Player grid, By Stat entry, shot zones, `logStat()` |
+| `js/actions.js` | Team/opponent actions, penalty pop-up, goal clock, assists, ejections |
+| `js/event-log.js` | Event Log and Undo |
+| `js/roster.js` | Roster screen and pulling roster/officials |
+| `js/sync.js` | The PIN and sending games to the workbook |
+| `js/settings.js` | Settings screen, Test Connection |
+| `js/exports.js` | Printable scoresheet, MaxPreps file |
+| `js/history.js` | History screen, Reset All Local Data |
+| `js/main.js` | Start-up (loaded last) |
+| `viewer.html`, `css/viewer.css`, `js/viewer.js` | The stats viewer |
+| `sw.js` | Offline support (list every file the app needs in `ASSETS`) |
+| `Code.gs` | The Google Apps Script (paste into the script editor) |
+
+The `js/` files are loaded in the order listed at the bottom of `index.html`.
 
 ## The workbook tabs
 
@@ -77,14 +104,15 @@ Scoresheet* still works too.
 
 ## Releasing a new version of the app
 
-1. Make the change in `index.html` (and/or `viewer.html`), bump the version
-   shown in the header (e.g. `V3.27`), and bump `CACHE_VERSION` in `sw.js`
-   (e.g. `lax-scorebook-v30` -> `v31`).
+1. Make the change, bump the version shown in the header and in Settings ->
+   About (`index.html`, e.g. `V3.28`), and bump `CACHE_VERSION` in `sw.js`
+   (e.g. `lax-scorebook-v31` -> `v32`). Forgetting the bump is not harmful
+   (devices still update on the next open) but the blue bar won't appear.
 2. Merge to `main`. GitHub Pages publishes it in a minute or two.
 3. Devices open the app instantly from their saved copy, download the new
    version in the background, and show a blue **"A new version ... is ready -
    Reload"** bar. Nothing reloads by itself, so a game in progress is never
    interrupted.
 
-If you add a new file the app needs offline (an image, say), add it to
+If you add a new file the app needs offline (a script, an image), add it to
 `ASSETS` in `sw.js`.

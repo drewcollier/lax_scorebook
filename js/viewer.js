@@ -1,0 +1,306 @@
+// js/viewer.js - the read-only stats viewer (viewer.html).
+
+// ---------- Config / state ----------
+// The built-in link (DEFAULT_SCRIPT_URL) comes from js/config.js, shared with the scorebook.
+// "URL" can override it on this device.
+var URL_KEY = 'lax_viewer_scriptUrl';
+var V = { url: '', pin: '', games: [], players: {}, events: [], gameId: '', gameRec: null,
+          active: { goal:true, sog:true, shot:true }, dots: [] };
+
+function $(id){ return document.getElementById(id); }
+function setStatus(m){ $('setupStatus').textContent = m || ''; }
+// Escape text before it goes into innerHTML (names always show exactly as typed).
+function esc(x){
+  if (x === null || x === undefined) return '';
+  return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ---------- Talking to the Apps Script ----------
+// Reading needs the scorekeeper PIN for now (family sign-in replaces this in a
+// later update). The PIN is asked once per visit and kept only in memory: it is
+// never stored and never put in a URL.
+function api(action, params, onOk, onErr) {
+  if (!V.url) { showUrl(); setStatus('Enter the Apps Script URL first.'); return; }
+  if (!V.pin) {
+    V.pin = (window.prompt('Enter the stats PIN to view the stats:') || '').trim();
+    if (!V.pin) { setStatus('A PIN is needed to view the stats. Tap Refresh to try again.'); return; }
+  }
+  var body = { action: action, pin: V.pin };
+  for (var k in params) body[k] = params[k];
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 20000);
+  fetch(V.url, { method: 'POST', body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
+    .then(function(r){ return r.text(); })
+    .then(function(t){
+      clearTimeout(timer);
+      var d; try { d = JSON.parse(t); } catch (e) { if (onErr) onErr('reply'); return; }
+      if (d && d.error === 'INVALID_PIN') { V.pin = ''; setStatus('Incorrect PIN. Tap Refresh to try again.'); return; }
+      if (d && d.success === false && d.message) { setStatus(d.message); return; }
+      onOk(d);
+    })
+    .catch(function(){ clearTimeout(timer); if (onErr) onErr('error'); });
+}
+
+// ---------- URL handling ----------
+function showUrl(){ $('urlRow').classList.remove('hide'); $('scriptUrl').value = V.url; }
+function saveUrl(){
+  var u = $('scriptUrl').value.trim();
+  if (!u) { setStatus('Please paste a URL.'); return; }
+  V.url = u; localStorage.setItem(URL_KEY, u);
+  $('urlRow').classList.add('hide');
+  bootstrap();
+}
+
+// ---------- Bootstrap: roster + games ----------
+function bootstrap(){
+  setStatus('Loading roster…');
+  api('getRoster', {}, function(d){
+    if (d.success && d.players) {
+      V.players = {};
+      d.players.forEach(function(p){ V.players[String(p.Player_ID)] = p; });
+    }
+    reloadGames();
+  }, function(){ setStatus('Could not reach the script. Check the URL (tap “URL”).'); showUrl(); });
+}
+
+function reloadGames(){
+  setStatus('Loading games…');
+  api('getGames', {}, function(d){
+    if (d.success && d.games) {
+      V.games = d.games;
+      var sel = $('gamePick');
+      sel.innerHTML = '<option value="">— select a game —</option>';
+      d.games.forEach(function(g){
+        var label = (g.Game_Label || (g.Date + ' vs ' + g.Opponent)) + (g.Score ? '  (' + g.Score + ')' : '');
+        var o = document.createElement('option'); o.value = g.Game_ID; o.textContent = label;
+        sel.appendChild(o);
+      });
+      setStatus(d.games.length + ' games available.');
+    } else { setStatus('No games returned.'); }
+  }, function(){ setStatus('Failed to load games.'); });
+}
+
+function onGameChange(){
+  var gid = $('gamePick').value;
+  if (!gid) { $('content').classList.add('hide'); return; }
+  V.gameId = gid;
+  V.gameRec = null;
+  for (var i=0;i<V.games.length;i++) if (V.games[i].Game_ID === gid) { V.gameRec = V.games[i]; break; }
+  setStatus('Loading events…');
+  api('getEvents', { gameId: gid }, function(d){
+    if (d.success && d.events) { V.events = d.events; renderAll(); setStatus(''); }
+    else { setStatus('No events returned for this game.'); }
+  }, function(){ setStatus('Failed to load events.'); });
+}
+
+// ---------- Cascade collapse: group rows into physical shots ----------
+// Exported rows have no event id, but a cascade shares identical (Player, Timestamp).
+// One physical shot = one group. Outcome = Goal > SOG > Shot. Zone from Shot/Goal row.
+function buildShots(){
+  var groups = {};
+  V.events.forEach(function(e){
+    var a = e.Action_Type;
+    if (a !== 'Goal' && a !== 'SOG' && a !== 'Shot') return;
+    var key = e.Primary_Player_ID + '|' + e.Timestamp;
+    if (!groups[key]) groups[key] = { player: e.Primary_Player_ID, period: e.Period,
+      hasGoal:false, hasSOG:false, hasShot:false, zone:'' };
+    var g = groups[key];
+    if (a === 'Goal') { g.hasGoal = true; if (e.Zone_ID) g.zone = e.Zone_ID; }
+    else if (a === 'SOG') { g.hasSOG = true; }
+    else if (a === 'Shot') { g.hasShot = true; if (e.Zone_ID && !g.zone) g.zone = e.Zone_ID; }
+  });
+  var shots = [];
+  for (var k in groups){
+    var g = groups[k];
+    var kind = g.hasGoal ? 'goal' : (g.hasSOG ? 'sog' : 'shot');
+    shots.push({ player: g.player, kind: kind, zone: g.zone, period: g.period });
+  }
+  return shots;
+}
+
+// ---------- Heatmap geometry (matches the scorer's picker) ----------
+var NS='http://www.w3.org/2000/svg', W=400,H=236, gle=40, cx=W/2, cy=gle, creaseR=26;
+var RADII=[creaseR,96,150,214], BOUNDS=[-90,-30,30,90], SIDES=['R','C','L'];
+function pt(ang,r){ var a=(90+ang)*Math.PI/180; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
+function arcPath(ri,ro,a0,a1){
+  var p1=pt(a0,ri),p2=pt(a1,ri),p3=pt(a1,ro),p4=pt(a0,ro), lg=(a1-a0)>180?1:0;
+  return 'M '+p1[0]+' '+p1[1]+' A '+ri+' '+ri+' 0 '+lg+' 1 '+p2[0]+' '+p2[1]+
+         ' L '+p3[0]+' '+p3[1]+' A '+ro+' '+ro+' 0 '+lg+' 0 '+p4[0]+' '+p4[1]+' Z';
+}
+function mkel(tag,at){ var e=document.createElementNS(NS,tag); for(var k in at) e.setAttribute(k,at[k]); return e; }
+function zoneIndex(zone){
+  // zone like "2R" -> ring 2, side R. Returns {ri,ro,a0,a1} or null.
+  if (!zone || zone.length < 2) return null;
+  var ring = parseInt(zone.charAt(0),10), side = zone.charAt(1);
+  var si = SIDES.indexOf(side);
+  if (!(ring>=1 && ring<=3) || si<0) return null;
+  return { ri: RADII[ring-1], ro: RADII[ring], a0: BOUNDS[si], a1: BOUNDS[si+1] };
+}
+function randIn(z){ var r=z.ri+7+Math.random()*(z.ro-z.ri-14), a=z.a0+5+Math.random()*(z.a1-z.a0-10); return pt(a,r); }
+
+function computeDots(){
+  var shots = buildShots();
+  var pf = $('playerFilter').value;
+  V.dots = [];
+  V._noZone = 0; V._counts = { goal:0, sog:0, shot:0 };
+  shots.forEach(function(s){
+    if (pf && s.player !== pf) return;
+    V._counts[s.kind]++;
+    var z = zoneIndex(s.zone);
+    if (!z) { V._noZone++; return; }           // shot with no captured zone — counted, not plotted
+    var p = randIn(z);
+    V.dots.push({ kind:s.kind, x:p[0], y:p[1] });
+  });
+}
+
+function drawField(){
+  var svg = $('hm'); while(svg.firstChild) svg.removeChild(svg.firstChild);
+  var line = '#333';
+  svg.appendChild(mkel('rect',{x:2,y:gle,width:W-4,height:H-gle-2,fill:'none',stroke:line,'stroke-width':1.5}));
+  for (var ring=3;ring>=1;ring--) for (var s=0;s<3;s++)
+    svg.appendChild(mkel('path',{d:arcPath(RADII[ring-1],RADII[ring],BOUNDS[s],BOUNDS[s+1]),fill:'none',stroke:line,'stroke-width':1}));
+  svg.appendChild(mkel('circle',{cx:cx,cy:cy,r:creaseR,fill:'none',stroke:line,'stroke-width':1.5}));
+  var tw=18,th=20;
+  svg.appendChild(mkel('path',{d:'M '+(cx-tw/2)+' '+cy+' L '+cx+' '+(cy-th)+' L '+(cx+tw/2)+' '+cy+' Z',fill:'none',stroke:line,'stroke-width':1.5}));
+  var COL={ goal:['var(--goal-f)','var(--goal-s)'], sog:['var(--sog-f)','var(--sog-s)'], shot:['var(--shot-f)','var(--shot-s)'] };
+  V.dots.forEach(function(d){
+    if (!V.active[d.kind]) return;
+    svg.appendChild(mkel('circle',{cx:d.x.toFixed(1),cy:d.y.toFixed(1),r:6,fill:COL[d.kind][0],stroke:COL[d.kind][1],'stroke-width':1}));
+  });
+}
+
+function renderHeatmap(){
+  computeDots();
+  drawField();
+  var c = V._counts, total = c.goal + c.sog + c.shot;
+  var pct = total ? Math.round((c.goal/total)*100) : 0;
+  var noZoneMsg = V._noZone ? ' &nbsp;|&nbsp; <em>' + V._noZone + ' shot(s) had no zone captured (counted, not plotted)</em>' : '';
+  $('hmTally').innerHTML =
+    '<b>'+total+'</b> total shots &nbsp;|&nbsp; '+
+    '<span style="color:#15803d">'+c.goal+' Goals</span>, '+
+    '<span style="color:#a16207">'+c.sog+' SOG</span>, '+
+    '<span style="color:#991b1b">'+c.shot+' Shots</span> &nbsp;|&nbsp; shooting '+pct+'%'+noZoneMsg;
+}
+
+function toggleType(t){
+  V.active[t] = !V.active[t];
+  var btn = document.querySelector('.hm-tog[data-type="'+t+'"]');
+  btn.classList.toggle('off', !V.active[t]);
+  drawField();
+}
+
+// ---------- Stats tables ----------
+function playerStats(){
+  var st = {};
+  function ens(pid){ if(!st[pid]) st[pid]={shots:0,sog:0,goals:0,assists:0,gbs:0,saves:0}; return st[pid]; }
+  V.events.forEach(function(e){
+    var a=e.Action_Type, prim=e.Primary_Player_ID, sec=e.Secondary_Player_ID;
+    if (prim){
+      if (a==='Shot') ens(prim).shots++;
+      else if (a==='SOG') ens(prim).sog++;
+      else if (a==='Goal') ens(prim).goals++;
+      else if (a==='GB') ens(prim).gbs++;
+      else if (a==='Save') ens(prim).saves++;
+    }
+    if (sec && a==='Goal') ens(sec).assists++;
+  });
+  return st;
+}
+
+var POS_ORDER=['Attack','Midfield','FOGO','Defense','Goalie'];
+function renderRoster(){
+  var st = playerStats();
+  var groups={}; POS_ORDER.forEach(function(p){groups[p]=[];}); groups.Other=[];
+  for (var pid in V.players){
+    var p=V.players[pid]; var s=st[pid]||{shots:0,sog:0,goals:0,assists:0,gbs:0,saves:0};
+    var row={jersey:p.Jersey,name:p.Name,pos:p.Position, s:s};
+    var key = POS_ORDER.indexOf(p.Position)>=0 ? p.Position : 'Other';
+    groups[key].push(row);
+  }
+  function byJ(a,b){ return (parseInt(a.jersey)||999)-(parseInt(b.jersey)||999); }
+  var html='<table><thead><tr><th>#</th><th class="l">Player</th><th>SH</th><th>SOG</th><th>G</th><th>A</th><th>GB</th><th>SV</th></tr></thead><tbody>';
+  POS_ORDER.concat(['Other']).forEach(function(g){
+    var rows=groups[g]; if(!rows.length) return; rows.sort(byJ);
+    html += '<tr class="pos-head"><td colspan="8">'+(g==='Other'?'OTHER':g.toUpperCase())+'</td></tr>';
+    rows.forEach(function(r){
+      html += '<tr><td><b>'+esc(r.jersey)+'</b></td><td class="l">'+esc(r.name)+'</td>'+
+        '<td>'+r.s.shots+'</td><td>'+r.s.sog+'</td><td>'+r.s.goals+'</td>'+
+        '<td>'+r.s.assists+'</td><td>'+r.s.gbs+'</td><td>'+(r.s.saves||'')+'</td></tr>';
+    });
+  });
+  html+='</tbody></table>';
+  $('rosterTable').innerHTML = html;
+  // Player filter for heatmap
+  var pf=$('playerFilter'); var cur=pf.value;
+  pf.innerHTML='<option value="">All players</option>';
+  var scorers=[];
+  for (var pid2 in V.players){ var p2=V.players[pid2];
+    scorers.push({id:pid2, label:'#'+p2.Jersey+' '+p2.Name}); }
+  scorers.sort(function(a,b){ return (parseInt(V.players[a.id].Jersey)||999)-(parseInt(V.players[b.id].Jersey)||999); });
+  scorers.forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=s.label; pf.appendChild(o); });
+  pf.value=cur;
+}
+
+function renderScoring(){
+  var st=playerStats(); var rows=[];
+  for (var pid in st){ var s=st[pid]; if ((s.goals+s.assists)>0 && V.players[pid])
+    rows.push({j:V.players[pid].Jersey,n:V.players[pid].Name,g:s.goals,a:s.assists,p:s.goals+s.assists}); }
+  rows.sort(function(a,b){ return b.p-a.p || b.g-a.g; });
+  var html='<table><thead><tr><th>#</th><th class="l">Name</th><th>G</th><th>A</th><th>PTS</th></tr></thead><tbody>';
+  if(!rows.length) html+='<tr><td colspan="5" class="empty">No scoring recorded</td></tr>';
+  rows.forEach(function(r){ html+='<tr><td><b>'+esc(r.j)+'</b></td><td class="l">'+esc(r.n)+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td><b>'+r.p+'</b></td></tr>'; });
+  html+='</tbody></table>'; $('scoringTable').innerHTML=html;
+}
+
+function renderSummary(){
+  var q={Q1:0,Q2:0,Q3:0,Q4:0,OT1:0,OT2:0}, oppQ={Q1:0,Q2:0,Q3:0,Q4:0,OT1:0,OT2:0};
+  var fw=0,fl=0,cg=0,cf=0,gb=0;
+  V.events.forEach(function(e){ var a=e.Action_Type,per=e.Period;
+    if(a==='Goal'){ if(q[per]!==undefined)q[per]++; }
+    else if(a==='Opp_Goal'){ if(oppQ[per]!==undefined)oppQ[per]++; }
+    else if(a==='FOW')fw++; else if(a==='FOL')fl++;
+    else if(a==='Clear_Good')cg++; else if(a==='Clear_Fail')cf++;
+    else if(a==='GB')gb++;
+  });
+  function sum(o){return o.Q1+o.Q2+o.Q3+o.Q4+o.OT1+o.OT2;}
+  var us=sum(q), them=sum(oppQ), foT=fw+fl, clT=cg+cf;
+  var html='<table><thead><tr><th class="l">Team</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>OT</th><th>Final</th></tr></thead><tbody>'+
+    '<tr><td class="l"><b>US</b></td><td>'+q.Q1+'</td><td>'+q.Q2+'</td><td>'+q.Q3+'</td><td>'+q.Q4+'</td><td>'+(q.OT1+q.OT2)+'</td><td><b>'+us+'</b></td></tr>'+
+    '<tr><td class="l">THEM</td><td>'+oppQ.Q1+'</td><td>'+oppQ.Q2+'</td><td>'+oppQ.Q3+'</td><td>'+oppQ.Q4+'</td><td>'+(oppQ.OT1+oppQ.OT2)+'</td><td><b>'+them+'</b></td></tr>'+
+    '</tbody></table>'+
+    '<table style="margin-top:8px;"><thead><tr><th>Face-offs</th><th>Clears</th><th>GBs</th></tr></thead><tbody>'+
+    '<tr><td>'+fw+'/'+foT+(foT?' ('+Math.round(fw/foT*100)+'%)':'')+'</td>'+
+    '<td>'+cg+'/'+clT+(clT?' ('+Math.round(cg/clT*100)+'%)':'')+'</td>'+
+    '<td><b>'+gb+'</b></td></tr></tbody></table>';
+  $('summaryTable').innerHTML=html;
+}
+
+function renderMeta(){
+  var g=V.gameRec||{};
+  $('gameMeta').innerHTML =
+    '<div>Date: '+esc(g.Date)+'</div>'+
+    '<div>Opponent: '+esc(g.Opponent)+'</div>'+
+    '<div>Site: '+esc(g.Location)+'</div>'+
+    '<div class="big">'+esc(g.Score)+'</div>';
+}
+
+function renderAll(){
+  $('content').classList.remove('hide');
+  renderMeta();
+  renderRoster();
+  renderHeatmap();
+  renderScoring();
+  renderSummary();
+}
+
+function showToast(){} // no-op (viewer has inline status)
+
+// ---------- Init ----------
+(function init(){
+  V.url = localStorage.getItem(URL_KEY) || (/^https?:\/\//.test(DEFAULT_SCRIPT_URL) ? DEFAULT_SCRIPT_URL : '');
+  ['goal','sog','shot'].forEach(function(t){
+    var b=document.querySelector('.hm-tog[data-type="'+t+'"]'); if(b) b.classList.remove('off');
+  });
+  if (V.url) bootstrap(); else { showUrl(); setStatus('Paste the Apps Script web app URL to begin.'); }
+})();
