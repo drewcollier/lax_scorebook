@@ -901,8 +901,7 @@ function generateScoresheetPDF() {
     if (action === 'Goal') {
       ensure(prim).goals++;
       if (inQ) tigersGoalQ[per]++;
-      if (sec && playerMap[sec]) ensure(sec).assists++;
-      else if (sec && sec !== 'undefined' && sec !== '' && sec !== 'null') ensure(sec).assists++;
+      if (sec && sec !== 'undefined' && sec !== 'null') ensure(sec).assists++;
       var sj = playerMap[prim] ? playerMap[prim].jersey : prim;
       var aj = playerMap[sec] ? playerMap[sec].jersey : '';
       goals.push({ clock: formatClock(eventsData[e][8]), scorer: sj, assist: aj });
@@ -1013,12 +1012,10 @@ function generateScoresheetPDF() {
   // Saves-by-quarter (goalies only).
   function savesBlock() {
     var rows = '';
-    ORDER.indexOf('Goalie');
     var any = false;
     for (var pid3 in stat) {
       if (!playerMap[pid3] || playerMap[pid3].position !== 'Goalie') continue;
       var q = stat[pid3].savesQ, tot = stat[pid3].saves;
-      if (tot === 0 && !playerMap[pid3]) continue;
       any = true;
       rows += '<tr><td><b>' + esc(playerMap[pid3].jersey) + '</b></td>'
         + '<td>' + q.Q1 + '</td><td>' + q.Q2 + '</td><td>' + q.Q3 + '</td><td>' + q.Q4 + '</td>'
@@ -1033,8 +1030,7 @@ function generateScoresheetPDF() {
   function qBox2(title, c1, c2, qa, qb) {
     var body = '';
     PERIODS.forEach(function(per){
-      var showPer = (per === 'OT1') ? 'OT1' : (per === 'OT2') ? 'OT2' : per;
-      body += '<tr><td class="qh">' + showPer + '</td><td>' + qa[per] + '</td><td>' + qb[per] + '</td></tr>';
+      body += '<tr><td class="qh">' + per + '</td><td>' + qa[per] + '</td><td>' + qb[per] + '</td></tr>';
     });
     body += '<tr class="tot"><td class="qh">TOT</td><td><b>' + sumQ(qa) + '</b></td><td><b>' + sumQ(qb) + '</b></td></tr>';
     return '<div class="box"><div class="box-t">' + title + '</div><table class="qt">'
