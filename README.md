@@ -44,3 +44,24 @@ so scorekeepers don't paste anything. It is safe to have in this public repo
 because every request also needs the PIN. If the link ever changes (only if a
 *new* deployment is created), update it in both files. Settings -> Google Apps
 Script URL on a device overrides it for that device only.
+
+## The workbook tabs
+
+| Tab | Filled by | Notes |
+|---|---|---|
+| **Players** | You | Jersey, Name, Position, isStarter. **Leave column A (Player_ID) blank** - each new player gets a permanent ID (P001, P002...) automatically. The ID never changes, even if the jersey number does, so stats always follow the right player. |
+| **Officials** | You | Role + Name, for the Start-Game dropdowns. |
+| **Events** | Script | Every recorded play. Re-syncing a game replaces its rows. |
+| **Games** | Script | One row per game, including the Game_Label used by the Scoresheet dropdown. |
+| **Game Log** | Script | Team totals per game (plain numbers). |
+| **Season Totals** | Script | One row per player, rebuilt every time a game is saved and whenever Players is edited. |
+| **Scoresheet Template** | You | Pick a game in B2, then **Lacrosse Tools -> Generate Printable Scoresheet**. |
+| **MaxPreps Export**, **Definitions** | - | Unchanged for now. |
+
+Don't type into the script-filled tabs: your changes would be overwritten.
+After editing **Events** by hand, run **Lacrosse Tools -> Rebuild Stats
+(Game Log + Season Totals)**.
+
+Add players on the **Players** tab, then **Pull Roster** in the app. A player
+added only inside the app (Roster screen -> add player) still has their plays
+saved to Events, but they won't appear in Season Totals.
