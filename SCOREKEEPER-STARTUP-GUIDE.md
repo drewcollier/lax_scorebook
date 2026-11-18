@@ -42,6 +42,8 @@ Total setup time: about 5 minutes.
    - ❌ **If it shows an error** — check you have internet and try again. If it
      still fails, contact me.
 
+![Settings: leave the link box blank, tap Test Connection](guide-images/settings.png)
+
 ### Step 3: Load the team roster
 
 1. Tap the **Roster** button at the top.
@@ -82,7 +84,7 @@ Do this shortly before game time.
    time, etc.). Fill in what you know and tap **Start Game** again to begin.
    - Anything you're unsure of can be left as-is.
 
-![Game tab before the game](guide-images/setup.png)
+![Game tab before the game: enter the opponent, then Start Game](guide-images/setup.png)
 
 You're now ready to score the game. 🥍
 
@@ -129,11 +131,9 @@ Enter it in the same order it is called out:
    The time is required for every goal.
 5. Tap the **shot location**, or tap **Skip**.
 
-![The assist, or No Assist](guide-images/goal-assist.png)
-
-![The time on the clock](guide-images/goal-clock.png)
-
-![The shot location, or Skip](guide-images/zone.png)
+![Step 3: the assist, or No Assist](guide-images/goal-assist.png)
+![Step 4: the time on the clock](guide-images/goal-clock.png)
+![Step 5: the shot location, or Skip](guide-images/zone.png)
 
 The goal also counts as a shot and a shot on goal automatically. Do not enter those
 separately. Nothing is saved until the last step, so if you tap **Cancel** before
@@ -163,7 +163,7 @@ Penalties work in the same order as everything else.
 Every active penalty appears in the **Active penalties** box, under the quarter
 buttons.
 
-![The Active penalties box](guide-images/penalties.png)
+![The Active penalties box with Served buttons](guide-images/penalties.png)
 
 - **EVEN, MAN-UP and MAN-DOWN are indicators, not buttons.** The app works them
   out from the penalties in the box, so you never tap them. If both teams have a
@@ -204,9 +204,8 @@ After you enter the goal's time, the app compares it with when each penalty star
 - **If the app reloads or the screen locks mid-game:** just reopen it. The
   quarter, timeouts, penalties, and ejections are all kept.
 
-![Jersey Grid](guide-images/grid.png)
-
-![By Player view](guide-images/byplayer.png)
+![Jersey Grid: tap the player](guide-images/grid.png)
+![By Player view: player cards](guide-images/byplayer.png)
 
 ---
 ## Part 4 — Saving the game (the PIN)
@@ -232,8 +231,8 @@ on this device** so it's only asked once. Don't tick it on a shared tablet.
   for Google to confirm. You'll see **Saved "…" to the workbook ✓** and the game
   shows **Synced ✓** on the **History** screen.
 - **No signal at the field?** That's fine. The game stays on your device and the
-  History screen shows **Press to sync**. Once you have signal, tap **Press to
-  sync** and enter the PIN. (On a device with **Remember the PIN** ticked, it sends
+  History screen shows **Press to sync** (*"No connection - tap Press to sync when
+  back online"*). Once you have signal, tap **Press to sync** and enter the PIN. (On a device with **Remember the PIN** ticked, it sends
   itself as soon as you're back online.)
 - Sending a game again is always safe: it replaces that game in the sheet, it
   never adds it twice.
@@ -241,6 +240,8 @@ on this device** so it's only asked once. Don't tick it on a shared tablet.
 ### After the game: scoresheet and MaxPreps file
 
 Open **History**. Each game has two buttons (no PIN or signal needed):
+
+![History: sync status, Scoresheet and MaxPreps file for each game](guide-images/history.png)
 
 - **Scoresheet** — the official one-page scoresheet. Tap **Print / Save PDF**:
   print it, or pick **Save as PDF** as the printer to keep or email a copy.

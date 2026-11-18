@@ -289,8 +289,12 @@ function pushGameFromHistory(gameId, mode) {
       return done('error', msg);
     });
   }).catch(function() {
-    if (loud) showToast('No connection. The game is kept on this device and will sync automatically when you\'re back online.', 'warning');
-    return done('offline', 'No connection - will retry automatically');
+    // Retrying by itself needs a remembered PIN; otherwise someone taps Press to sync.
+    var auto = !!getSavedPin();
+    if (loud) showToast(auto
+      ? 'No connection. The game is kept on this device and will sync automatically when you\'re back online.'
+      : 'No connection. The game is kept on this device. Tap Press to sync in History when you\'re back online.', 'warning');
+    return done('offline', auto ? 'No connection - will retry automatically' : 'No connection - tap Press to sync when back online');
   });
 }
 
