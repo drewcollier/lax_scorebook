@@ -231,6 +231,18 @@ When the game ends and you save it to the team sheet, the app will ask for the
 If you ever mistype it or need to change it:
 - Go to **Settings** → **Stats PIN** → **Change / Clear Saved PIN**.
 
+### How you know it saved
+
+- When you tap **END GAME**, the app sends the game to the team sheet and waits
+  for Google to confirm. You'll see **Saved "…" to the workbook ✓** and the game
+  shows **Synced ✓** on the **History** screen.
+- **No signal at the field?** That's fine. The game stays on your device and the
+  History screen shows **Press to sync** with *"No connection - will retry
+  automatically"*. It sends itself as soon as you're back online or the next time
+  you open the app. You can also tap **Press to sync** yourself.
+- Sending a game again is always safe: it replaces that game in the sheet, it
+  never adds it twice.
+
 ---
 
 ## Quick troubleshooting
@@ -244,6 +256,9 @@ If you ever mistype it or need to change it:
 | "Jersey # doesn't exist on the roster" | That number is not on the roster. Tap **Re-enter**, or pull the roster again if it is out of date. |
 | EVEN / MAN-UP / MAN-DOWN won't respond when tapped | They are indicators. Add or remove penalties in the **Active penalties** box and they update on their own. |
 | "Penalty already expired" message after a goal | A penalty had run out before the goal. Tap **OK**. Next time, tap **Served** when a penalty ends. |
+| History says "No connection - will retry automatically" | Nothing to do. It syncs on its own once you have signal (or tap **Press to sync**). |
+| History says "Wrong PIN - tap to try again" | Tap **Press to sync** and type the correct **Stats PIN**. |
+| **Test Connection** says the script is "an older version" | Let me know — the team's Apps Script needs its update. Games still save, but can't be confirmed until then. |
 | Game won't save / asks for PIN | Type the **Stats PIN** I sent you. If rejected, use **Settings → Stats PIN → Change / Clear Saved PIN** and re-enter it. |
 
 ---
