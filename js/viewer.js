@@ -2,32 +2,39 @@
 
 // ---------- Config / state ----------
 // The built-in link (DEFAULT_SCRIPT_URL) comes from js/config.js, shared with the scorebook.
-// "URL" can override it on this device.
+// "URL" (coach view) can override it on this device.
+//
+// Two ways in:
+//  - Families sign in with their email + a 6-digit emailed code and see ONLY their
+//    own player (the script decides which player; it never sends anyone else's data).
+//    The sign-in token is kept on this device for 30 days; Sign out removes it.
+//  - The coach uses the Stats PIN for the whole team. The PIN is asked for each
+//    visit, kept only in memory, never stored and never put in a URL.
 var URL_KEY = 'lax_viewer_scriptUrl';
-var V = { url: '', pin: '', games: [], players: {}, events: [], gameId: '', gameRec: null,
-          active: { goal:true, sog:true, shot:true }, dots: [] };
+var SESSION_KEY = 'lax_viewer_session';
+var V = { url: '', pin: '', mode: '', games: [], players: {}, events: [], gameId: '', gameRec: null,
+          active: { goal:true, sog:true, shot:true }, dots: [],
+          fam: null, famPid: '', allEvents: [], signEmail: '' };
 
 function $(id){ return document.getElementById(id); }
+function show(id, on){ $(id).classList.toggle('hide', !on); }
 function setStatus(m){ $('setupStatus').textContent = m || ''; }
+function setSignStatus(m, isErr){ var el = $('signStatus'); el.textContent = m || ''; el.classList.toggle('err', !!isErr); }
 // Escape text before it goes into innerHTML (names always show exactly as typed).
 function esc(x){
   if (x === null || x === undefined) return '';
   return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v){ try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+function getSession(){ try { return JSON.parse(lsGet(SESSION_KEY) || 'null'); } catch (e) { return null; } }
 
 // ---------- Talking to the Apps Script ----------
-// Reading needs the scorekeeper PIN for now (family sign-in replaces this in a
-// later update). The PIN is asked once per visit and kept only in memory: it is
-// never stored and never put in a URL.
-function api(action, params, onOk, onErr) {
-  if (!V.url) { showUrl(); setStatus('Enter the Apps Script URL first.'); return; }
-  if (!V.pin) {
-    V.pin = (window.prompt('Enter the stats PIN to view the stats:') || '').trim();
-    if (!V.pin) { setStatus('A PIN is needed to view the stats. Tap Refresh to try again.'); return; }
-  }
-  var body = { action: action, pin: V.pin };
-  for (var k in params) body[k] = params[k];
+// POST a JSON body (never a URL parameter). onOk gets the parsed reply;
+// onErr('network'|'reply') when the script can't be reached or answers oddly.
+function post(body, onOk, onErr) {
+  if (!V.url) { if (onErr) onErr('nourl'); return; }
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 20000);
   fetch(V.url, { method: 'POST', body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
@@ -35,25 +42,223 @@ function api(action, params, onOk, onErr) {
     .then(function(t){
       clearTimeout(timer);
       var d; try { d = JSON.parse(t); } catch (e) { if (onErr) onErr('reply'); return; }
-      if (d && d.error === 'INVALID_PIN') { V.pin = ''; setStatus('Incorrect PIN. Tap Refresh to try again.'); return; }
-      if (d && d.success === false && d.message) { setStatus(d.message); return; }
       onOk(d);
     })
-    .catch(function(){ clearTimeout(timer); if (onErr) onErr('error'); });
+    .catch(function(){ clearTimeout(timer); if (onErr) onErr('network'); });
 }
 
-// ---------- URL handling ----------
+// Coach view: every read carries the PIN (asked once per visit, memory only).
+function api(action, params, onOk, onErr) {
+  if (!V.url) { showUrl(); setStatus('Enter the Apps Script URL first.'); return; }
+  if (!V.pin) {
+    V.pin = (window.prompt('Enter the Stats PIN to view the whole team:') || '').trim();
+    if (!V.pin) { setStatus('A PIN is needed for the coach view. Tap Refresh to try again.'); return; }
+  }
+  var body = { action: action, pin: V.pin };
+  for (var k in params) body[k] = params[k];
+  post(body, function(d){
+    if (d && d.error === 'INVALID_PIN') { V.pin = ''; setStatus('Incorrect PIN. Tap Refresh to try again.'); return; }
+    if (d && d.success === false && d.message) { setStatus(d.message); return; }
+    onOk(d);
+  }, onErr);
+}
+
+// ---------- Screens ----------
+function showSignIn(msg, isErr){
+  V.mode = ''; V.pin = '';
+  ['whoCard','famCards','setupCard','content'].forEach(function(id){ show(id, false); });
+  show('signInCard', true);
+  showEmailStep();
+  setSignStatus(msg || '', isErr);
+}
+function showEmailStep(){
+  show('emailStep', true); show('codeStep', false);
+  $('signEmail').value = V.signEmail || '';
+  setSignStatus('');
+}
+
+// ---------- Family sign-in ----------
+function requestCode(){
+  var email = $('signEmail').value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setSignStatus('Please enter a valid email address.', true); return; }
+  V.signEmail = email;
+  $('sendCodeBtn').disabled = true;
+  setSignStatus('Sending…');
+  post({ action: 'requestCode', email: email }, function(d){
+    $('sendCodeBtn').disabled = false;
+    if (!d.success) { setSignStatus(d.message || 'Something went wrong. Try again.', true); return; }
+    $('codeEmail').textContent = email;
+    show('emailStep', false); show('codeStep', true);
+    $('signCode').value = '';
+    setSignStatus('');
+    $('signCode').focus();
+  }, function(){ $('sendCodeBtn').disabled = false; setSignStatus('Could not reach the stats server. Check your connection and try again.', true); });
+}
+
+function verifyCode(){
+  var code = $('signCode').value.replace(/\D/g, '');
+  if (code.length !== 6) { setSignStatus('The code is 6 digits.', true); return; }
+  $('verifyBtn').disabled = true;
+  setSignStatus('Checking…');
+  post({ action: 'verifyCode', email: V.signEmail, code: code }, function(d){
+    $('verifyBtn').disabled = false;
+    if (!d.success) { setSignStatus(d.message || 'That code didn\'t work.', true); return; }
+    lsSet(SESSION_KEY, JSON.stringify({ token: d.token, email: d.email }));
+    setSignStatus('');
+    loadFamily();
+  }, function(){ $('verifyBtn').disabled = false; setSignStatus('Could not reach the stats server. Try again.', true); });
+}
+
+function signOut(){
+  var s = getSession();
+  lsSet(SESSION_KEY, null);
+  if (s && s.token) post({ action: 'signOut', token: s.token }, function(){}, function(){});
+  V.fam = null; V.famPid = '';
+  showSignIn('You are signed out.');
+}
+
+// ---------- Family view (own player only) ----------
+function loadFamily(){
+  var s = getSession();
+  if (!s || !s.token) { showSignIn(); return; }
+  V.mode = 'family';
+  show('signInCard', false);
+  show('whoCard', true); show('setupCard', true);
+  show('urlBtn', false); show('urlRow', false);
+  $('whoText').textContent = 'Signed in as ' + (s.email || '');
+  $('signOutBtn').textContent = 'Sign out';
+  setStatus('Loading your stats…');
+  post({ action: 'myStats', token: s.token }, function(d){
+    if (!d.success) {
+      if (d.error === 'NOT_SIGNED_IN' || d.error === 'NOT_APPROVED') {
+        lsSet(SESSION_KEY, null);
+        showSignIn(d.error === 'NOT_APPROVED' ? 'This email is no longer approved to view stats. Contact the coach.' : 'Please sign in again.', true);
+      } else setStatus(d.message || 'Could not load stats.');
+      return;
+    }
+    V.fam = d;
+    V.allEventsAll = d.events || [];
+    V.games = d.games || [];
+    var sel = $('famPlayer');
+    sel.innerHTML = '';
+    d.players.forEach(function(p){
+      var o = document.createElement('option'); o.value = p.Player_ID;
+      o.textContent = '#' + p.Jersey + ' ' + p.Name; sel.appendChild(o);
+    });
+    if (!d.players.some(function(p){ return p.Player_ID === V.famPid; })) V.famPid = d.players[0].Player_ID;
+    sel.value = V.famPid;
+    show('famPlayer', d.players.length > 1);
+    var gp = $('gamePick');
+    gp.innerHTML = '<option value="__all">All games (season)</option>';
+    V.games.forEach(function(g){
+      var o = document.createElement('option'); o.value = g.Game_ID;
+      o.textContent = (g.Game_Label || (g.Date + ' vs ' + g.Opponent)) + (g.Score ? '  (' + g.Score + ')' : '');
+      gp.appendChild(o);
+    });
+    if (V.gameId !== '__all' && !V.games.some(function(g){ return g.Game_ID === V.gameId; })) V.gameId = '__all';
+    gp.value = V.gameId || '__all';
+    setStatus(V.games.length + ' game' + (V.games.length === 1 ? '' : 's') + '.');
+    applyFamPlayer();
+  }, function(){ setStatus('Could not reach the stats server. Tap Refresh to try again.'); });
+}
+
+function onFamPlayerChange(){ V.famPid = $('famPlayer').value; applyFamPlayer(); }
+
+// Narrow everything to the chosen player (siblings share one sign-in).
+function applyFamPlayer(){
+  var pid = V.famPid, d = V.fam;
+  V.players = {};
+  d.players.forEach(function(p){ if (p.Player_ID === pid) V.players[pid] = p; });
+  V.allEvents = V.allEventsAll.filter(function(e){ return e.Primary_Player_ID === pid || e.Secondary_Player_ID === pid; });
+  show('famCards', true);
+  renderSeason();
+  renderGameByGame();
+  onGameChange();
+}
+
+function pct(x){ return (x === '' || x === null || x === undefined || isNaN(Number(x))) ? '–' : Math.round(Number(x) * 1000) / 10 + '%'; }
+function num(x){ return (x === '' || x === null || x === undefined) ? '–' : esc(x); }
+function penTime(x){ // Season Totals stores penalty time as a fraction of a day
+  var secs = Math.round(Number(x || 0) * 86400); if (!secs) return '0:00';
+  return Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
+}
+function isGoalie(p, s){ return (p && p.Position === 'Goalie') || (s && (Number(s.SV) > 0 || Number(s.GA) > 0)); }
+
+function renderSeason(){
+  var p = V.players[V.famPid], s = (V.fam.season || {})[V.famPid];
+  if (!s) { $('seasonTable').innerHTML = '<div class="empty">No season totals yet.</div>'; return; }
+  var cols = [['GP','GP'],['G','G'],['A','A'],['Pts','PTS'],['S','SH'],['SOG','SOG'],['Shooting %','SH%'],['GB','GB'],
+    ['CT','CT'],['TO','TO']];
+  if (Number(s.FW) + Number(s.FL) > 0) cols.push(['FW','FOW'],['FL','FOL'],['FO Win %','FO%']);
+  cols.push(['PEN','PEN'],['Pen Min','PIM']);
+  if (isGoalie(p, s)) cols.push(['SV','SV'],['GA','GA'],['Save %','SV%']);
+  if (Number(s.INT) > 0) cols.push(['INT','INT']);
+  var h = '<div class="scroll"><table><thead><tr>', b = '<tr>';
+  cols.forEach(function(c){
+    h += '<th>' + c[1] + '</th>';
+    var v = s[c[0]];
+    b += '<td>' + (/%$/.test(c[0]) ? pct(v) : c[0] === 'Pen Min' ? penTime(v) : num(v)) + '</td>';
+  });
+  $('seasonTable').innerHTML = h + '</tr></thead><tbody>' + b + '</tr></tbody></table></div>';
+}
+
+function renderGameByGame(){
+  var pid = V.famPid, p = V.players[pid];
+  var by = {};
+  V.allEvents.forEach(function(e){
+    var g = by[e.Game_ID] || (by[e.Game_ID] = { G:0, A:0, SH:0, SOG:0, GB:0, CT:0, TO:0, SV:0, GA:0, PEN:0 });
+    var a = e.Action_Type;
+    if (e.Primary_Player_ID === pid) {
+      if (a === 'Goal') g.G++; else if (a === 'Shot') g.SH++; else if (a === 'SOG') g.SOG++;
+      else if (a === 'GB') g.GB++; else if (a === 'CTO') g.CT++; else if (a === 'TO') g.TO++;
+      else if (a === 'Save') g.SV++; else if (a === 'GA') g.GA++; else if (a === 'Penalty') g.PEN++;
+    }
+    if (e.Secondary_Player_ID === pid && a === 'Goal') g.A++;
+  });
+  var goalie = isGoalie(p, (V.fam.season || {})[pid]);
+  var keys = ['G','A','SH','SOG','GB','CT','TO','PEN'].concat(goalie ? ['SV','GA'] : []);
+  var html = '<div class="scroll"><table><thead><tr><th class="l">Game</th><th>Result</th>';
+  keys.forEach(function(k){ html += '<th>' + k + '</th>'; });
+  html += '</tr></thead><tbody>';
+  if (!V.games.length) html += '<tr><td colspan="' + (keys.length + 2) + '" class="empty">No games yet</td></tr>';
+  V.games.forEach(function(g){
+    var s = by[g.Game_ID];
+    html += '<tr class="clickable' + (V.gameId === g.Game_ID ? ' sel' : '') + '" data-gid="' + esc(g.Game_ID) + '">' +
+      '<td class="l">' + esc(g.Date) + ' ' + (g.Location === 'Away' ? '@ ' : 'vs ') + esc(g.Opponent) + '</td>' +
+      '<td>' + esc(g.Score) + '</td>';
+    keys.forEach(function(k){ html += '<td>' + (s ? s[k] : '–') + '</td>'; });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  $('gameByGame').innerHTML = html;
+  Array.prototype.forEach.call($('gameByGame').querySelectorAll('tr.clickable'), function(tr){
+    tr.addEventListener('click', function(){ $('gamePick').value = tr.getAttribute('data-gid'); onGameChange(); });
+  });
+}
+
+// ---------- Coach view (Stats PIN, whole team) ----------
+function startCoach(){
+  V.mode = 'coach';
+  show('signInCard', false); show('famCards', false);
+  show('whoCard', true); show('setupCard', true); show('urlBtn', true); show('famPlayer', false);
+  $('whoText').textContent = 'Coach view (whole team)';
+  $('signOutBtn').textContent = 'Exit coach view';
+  bootstrap();
+}
+
+// ---------- URL handling (coach view) ----------
 function showUrl(){ $('urlRow').classList.remove('hide'); $('scriptUrl').value = V.url; }
 function saveUrl(){
   var u = $('scriptUrl').value.trim();
   if (!u) { setStatus('Please paste a URL.'); return; }
-  V.url = u; localStorage.setItem(URL_KEY, u);
+  V.url = u; lsSet(URL_KEY, u);
   $('urlRow').classList.add('hide');
   bootstrap();
 }
 
 // ---------- Bootstrap: roster + games ----------
 function bootstrap(){
+  if (V.mode === 'family') { loadFamily(); return; }
   setStatus('Loading roster…');
   api('getRoster', {}, function(d){
     if (d.success && d.players) {
@@ -83,6 +288,18 @@ function reloadGames(){
 
 function onGameChange(){
   var gid = $('gamePick').value;
+  if (V.mode === 'family') {
+    V.gameId = gid || '__all';
+    V.gameRec = null;
+    for (var j=0;j<V.games.length;j++) if (V.games[j].Game_ID === V.gameId) { V.gameRec = V.games[j]; break; }
+    V.events = V.gameId === '__all' ? V.allEvents
+      : V.allEvents.filter(function(e){ return e.Game_ID === V.gameId; });
+    renderAll();
+    Array.prototype.forEach.call($('gameByGame').querySelectorAll('tr.clickable'), function(tr){
+      tr.classList.toggle('sel', tr.getAttribute('data-gid') === V.gameId);
+    });
+    return;
+  }
   if (!gid) { $('content').classList.add('hide'); return; }
   V.gameId = gid;
   V.gameRec = null;
@@ -102,6 +319,7 @@ function buildShots(){
   V.events.forEach(function(e){
     var a = e.Action_Type;
     if (a !== 'Goal' && a !== 'SOG' && a !== 'Shot') return;
+    if (!e.Primary_Player_ID) return; // a family's assist on someone else's goal: not their shot
     var key = e.Primary_Player_ID + '|' + e.Timestamp;
     if (!groups[key]) groups[key] = { player: e.Primary_Player_ID, period: e.Period,
       hasGoal:false, hasSOG:false, hasShot:false, zone:'' };
@@ -239,7 +457,7 @@ function renderRoster(){
     scorers.push({id:pid2, label:'#'+p2.Jersey+' '+p2.Name}); }
   scorers.sort(function(a,b){ return (parseInt(V.players[a.id].Jersey)||999)-(parseInt(V.players[b.id].Jersey)||999); });
   scorers.forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=s.label; pf.appendChild(o); });
-  pf.value=cur;
+  pf.value = V.mode === 'family' ? '' : cur;
 }
 
 function renderScoring(){
@@ -277,6 +495,10 @@ function renderSummary(){
 }
 
 function renderMeta(){
+  if (V.mode === 'family' && !V.gameRec) {
+    $('gameMeta').innerHTML = '<div>All games this season (' + V.games.length + ')</div>';
+    return;
+  }
   var g=V.gameRec||{};
   $('gameMeta').innerHTML =
     '<div>Date: '+esc(g.Date)+'</div>'+
@@ -287,6 +509,10 @@ function renderMeta(){
 
 function renderAll(){
   $('content').classList.remove('hide');
+  // Families see only their player: no team scoring or team summary.
+  show('teamCards', V.mode !== 'family');
+  $('playerFilter').classList.toggle('hide', V.mode === 'family');
+  if (V.mode === 'family') $('playerFilter').value = '';
   renderMeta();
   renderRoster();
   renderHeatmap();
@@ -298,9 +524,19 @@ function showToast(){} // no-op (viewer has inline status)
 
 // ---------- Init ----------
 (function init(){
-  V.url = localStorage.getItem(URL_KEY) || (/^https?:\/\//.test(DEFAULT_SCRIPT_URL) ? DEFAULT_SCRIPT_URL : '');
+  V.url = lsGet(URL_KEY) || (/^https?:\/\//.test(DEFAULT_SCRIPT_URL) ? DEFAULT_SCRIPT_URL : '');
   ['goal','sog','shot'].forEach(function(t){
     var b=document.querySelector('.hm-tog[data-type="'+t+'"]'); if(b) b.classList.remove('off');
   });
-  if (V.url) bootstrap(); else { showUrl(); setStatus('Paste the Apps Script web app URL to begin.'); }
+  if (typeof SIGNUP_FORM_URL === 'string' && /^https:\/\//.test(SIGNUP_FORM_URL)) {
+    $('signupNote').innerHTML = 'Not signed up yet? <a href="' + esc(SIGNUP_FORM_URL) + '" target="_blank" rel="noopener">Fill out the sign-up form</a>. ' +
+      'Each player can have up to two emails (for example, the player and one parent).';
+  }
+  // "Exit coach view" and "Sign out" share one button.
+  $('signOutBtn').onclick = function(){
+    if (V.mode === 'coach') { $('signOutBtn').textContent = 'Sign out'; showSignIn(); }
+    else signOut();
+  };
+  if (!V.url) { show('setupCard', true); showUrl(); setStatus('Paste the Apps Script web app URL to begin.'); return; }
+  if (getSession()) loadFamily(); else showSignIn();
 })();

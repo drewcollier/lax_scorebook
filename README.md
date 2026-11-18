@@ -65,7 +65,7 @@ device only.
 |---|---|
 | `index.html` | The scorebook's screens and pop-ups (markup only) |
 | `css/app.css` | All scorebook styles, including the printable scoresheet |
-| `js/config.js` | The built-in script link (shared with the viewer) |
+| `js/config.js` | The built-in script link (shared with the viewer) and the sign-up form link |
 | `js/boot.js` | Offline support start-up, "new version" bar, storage protection |
 | `js/state.js` | App state, saving it on the device, helpers, tab switching |
 | `js/game.js` | Start/end game, Start-Game details, quarters, timeouts, EMO |
@@ -98,6 +98,8 @@ The `js/` files are loaded in the order listed at the bottom of `index.html`.
 | **Scoresheet Template** | You | Pick a game in B2, then **Lacrosse Tools -> Generate Printable Scoresheet**. |
 | **MaxPreps Export** | Script | Season-to-date stats in MaxPreps' boys lacrosse stat-sheet columns (TA = caused turnovers, UE = turnovers, FA = faceoffs won + lost, PM/PS = penalty minutes + leftover seconds). Goalie MIN/W/L/T/Shut Out only from games where one goalie played the whole game (48 min + 4 per OT). |
 | **Definitions** | You | Stat glossary. |
+| **Viewers** | Form + you | Who may sign in to the stats viewer. See *Family sign-in* below. |
+| **Form Responses 1** | Google Form | Answers to the family sign-up form. The script adds a **Copied** column; leave it alone. |
 
 Don't type into the script-filled tabs: your changes would be overwritten.
 After editing **Events** by hand, run **Lacrosse Tools -> Rebuild Stats
@@ -106,6 +108,33 @@ After editing **Events** by hand, run **Lacrosse Tools -> Rebuild Stats
 Add players on the **Players** tab, then **Pull Roster** in the app. A player
 added only inside the app (Roster screen -> add player) still has their plays
 saved to Events, but they won't appear in Season Totals.
+
+## Family sign-in (stats viewer)
+
+Families open `viewer.html`, type their email, get a 6-digit code by email, and
+then see **only their own player's** stats (season totals, game by game, shot
+map). The script decides which player; nothing about other players is sent to
+their device. The coach can still see the whole team with **Use the Stats PIN**.
+
+- **Signing up:** families fill out the sign-up Google Form (email, player's name,
+  jersey #, player or parent). New answers are copied into the **Viewers** tab
+  unapproved, whenever the Sheet is opened, when anyone asks for a code, or with
+  **Lacrosse Tools -> Check for new sign-ups**.
+- **Approving:** tick **Approved**. The script fills **Player_ID** by matching the
+  jersey and name, and **Status** says what's going on ("Active - can sign in",
+  "Check the player...", etc.). If the match is wrong or missing, type the right
+  Player_ID (P###) yourself. **Notes** is yours.
+- **Limit:** 2 approved emails per player. A 3rd tick is undone and explained in
+  Status. One email can be approved for two players (brothers); they get a picker.
+- **Cutting off access:** untick Approved (or delete the row). It takes effect at
+  once, even on a phone that's already signed in.
+- **Limits built in:** codes last 10 minutes, 5 wrong tries, 3 codes per 15
+  minutes per email; a device stays signed in 30 days; 4 devices per email.
+  A personal Gmail account can send about 100 code emails a day.
+- **Sign-up link on the viewer:** put the form's link in `SIGNUP_FORM_URL` in
+  `js/config.js`.
+- Sign-ins are kept in Script Properties as `S_...` entries (fingerprints only,
+  never the real token). They clean themselves up; don't edit them.
 
 ## Scoresheet and MaxPreps file in the app
 
