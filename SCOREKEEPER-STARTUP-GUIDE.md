@@ -203,7 +203,13 @@ After you enter the goal's time, the app compares it with when each penalty star
 - **By Player:** tap **By Player** at the top of the Game tab to see player cards.
   Tap a player first, then the stat.
 - **Ejections:** use the **EJECTION** button, same as always.
-- **Fixing a mistake:** find the entry in the Event Log and tap **Undo**.
+- **Fixing a mistake:** find the entry in the Event Log and tap **Undo**. Undo
+  removes everything that one tap recorded: undoing a goal also removes its Shot
+  and Shot on Goal (and any man-up success it counted), undoing a Goal Allowed
+  or Save also removes the opponent's shot rows, and undoing a penalty also takes
+  back any ejection it caused.
+- **If the app reloads or the screen locks mid-game:** just reopen it. The
+  quarter, timeouts, penalties, and ejections are all kept.
 
 ![Jersey Grid](guide-images/grid.png)
 
