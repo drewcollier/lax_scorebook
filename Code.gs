@@ -18,8 +18,9 @@ var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
  *   1 = original (form post, unconfirmed)
  *   2 = JSON replies, re-sync replaces the game, Game Log written by the script
  *   3 = every data read needs the PIN too (sent in a POST body, never in a URL)
+ *   4 = Season Totals written by the script; permanent player IDs (P001...)
  */
-var SCRIPT_VERSION = 3;
+var SCRIPT_VERSION = 4;
 
 /**
  * The scorekeeper PIN.
@@ -276,6 +277,7 @@ function handleExportGame(gameData) {
     var removed = writeEvents_(ss, gameId, events);
     writeGameRow_(ss, game);
     writeGameLogRow_(ss, game, events);
+    rebuildSeasonTotals_(ss);
     SpreadsheetApp.flush();
 
     return {
@@ -387,7 +389,7 @@ function writeGameRow_(ss, g) {
 // Written as plain numbers when a game is saved, instead of ~2,500 live
 // COUNTIFS formulas that recalculated on every edit. Columns are matched by
 // their header names in row 1, so the tab's column order can change safely.
-// Lacrosse Tools > Rebuild Game Log recalculates every game from the Events tab
+// Lacrosse Tools > Rebuild Stats recalculates every game from the Events tab
 // (use it after editing Events by hand).
 // ============================================================
 var GL_PERIODS = ['Q1', 'Q2', 'Q3', 'Q4', 'OT1', 'OT2'];
@@ -515,10 +517,165 @@ function rebuildGameLog_(ss) {
   return rows.length;
 }
 
-// Menu item: Lacrosse Tools > Rebuild Game Log
-function rebuildGameLog() {
-  var n = rebuildGameLog_(SpreadsheetApp.getActiveSpreadsheet());
-  SpreadsheetApp.getUi().alert('Game Log rebuilt: ' + n + ' game(s).');
+// Menu item: Lacrosse Tools > Rebuild Stats
+// Assigns any missing player IDs, then recalculates Game Log and Season Totals
+// from the Events tab. Use it after editing Events or Players by hand.
+function rebuildStats() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ids = assignPlayerIds_(ss);
+  var games = rebuildGameLog_(ss);
+  var players = rebuildSeasonTotals_(ss);
+  SpreadsheetApp.getUi().alert('Stats rebuilt: ' + games + ' game(s), ' + players + ' player(s)'
+    + (ids ? ', ' + ids + ' new player ID(s) assigned.' : '.'));
+}
+// Older menu name, kept so a bookmarked/assigned run still works.
+function rebuildGameLog() { rebuildStats(); }
+
+// ============================================================
+// PLAYERS: permanent IDs
+// Every player gets an ID like P001 the first time their row is filled in.
+// It never changes - not when the jersey number changes, not when the sheet is
+// sorted - so stats (and, later, family logins) always follow the right player.
+// Never type in column A; leave it blank and the ID appears by itself.
+// ============================================================
+var PLAYER_ID_RE = /^P(\d+)$/;
+
+// Give an ID to every Players row that has a jersey or name but no proper ID,
+// and to the second copy of any duplicated ID (e.g. a copied row).
+// Returns how many IDs were assigned.
+function assignPlayerIds_(ss) {
+  var sheet = ss.getSheetByName('Players');
+  if (!sheet || sheet.getLastRow() < 2) return 0;
+  var n = sheet.getLastRow() - 1;
+  var rows = sheet.getRange(2, 1, n, 3).getValues();
+  var formulas = sheet.getRange(2, 1, n, 1).getFormulas();
+  var max = 0;
+  rows.forEach(function(r, i) {
+    var m = PLAYER_ID_RE.exec(String(r[0]).trim());
+    if (m && !formulas[i][0]) max = Math.max(max, parseInt(m[1], 10));
+  });
+  var seen = {};
+  var out = [];
+  var changed = 0;
+  rows.forEach(function(r, i) {
+    var id = String(r[0]).trim();
+    var filled = String(r[1]).trim() !== '' || String(r[2]).trim() !== '';
+    var valid = PLAYER_ID_RE.test(id) && !formulas[i][0] && !seen[id];
+    if (filled && !valid) {
+      max++;
+      id = String(max);
+      while (id.length < 3) id = '0' + id;
+      id = 'P' + id;
+      changed++;
+    } else if (!filled && !valid) {
+      id = '';
+    }
+    if (id) seen[id] = true;
+    out.push([id]);
+  });
+  if (changed) sheet.getRange(2, 1, n, 1).setValues(out);
+  return changed;
+}
+
+// Runs by itself whenever someone edits the Sheet. When the Players tab is
+// changed, new players get their ID and Season Totals is refreshed.
+// (Simple triggers may only use the spreadsheet they're attached to, so this
+// uses e.source rather than SHEET_ID.)
+function onEdit(e) {
+  if (!e || !e.range) return;
+  var sheet = e.range.getSheet();
+  if (sheet.getName() !== 'Players') return;
+  var ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+  assignPlayerIds_(ss);
+  rebuildSeasonTotals_(ss);
+}
+
+// ============================================================
+// SEASON TOTALS (one row per player, written as plain numbers)
+// Rebuilt from the Players + Events tabs every time a game is saved, whenever
+// the Players tab is edited, and by Lacrosse Tools > Rebuild Stats. Replaces
+// the per-row formulas, which had to be copied by hand for every player and
+// had a wrong penalty count for #3, #4 and #9 and showed GP 1 for players
+// with no games. Columns are matched by their header names in row 1.
+// ============================================================
+function rebuildSeasonTotals_(ss) {
+  var sheet = ss.getSheetByName('Season Totals');
+  var players = ss.getSheetByName('Players');
+  if (!sheet || !players) return 0;
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+
+  // Tally every event once.
+  var st = {};
+  function P(id) {
+    if (!st[id]) st[id] = { games: {}, G: 0, A: 0, S: 0, SOG: 0, GB: 0, CT: 0, TO: 0, FW: 0, FL: 0,
+      PEN: 0, penSecs: 0, SV: 0, GA: 0, INT: 0 };
+    return st[id];
+  }
+  var ev = ss.getSheetByName('Events');
+  if (ev && ev.getLastRow() >= 2) {
+    ev.getRange(2, 1, ev.getLastRow() - 1, EVENT_HEADERS.length).getValues().forEach(function(r) {
+      var game = String(r[1]), type = String(r[3]), prim = String(r[4]), sec = String(r[5]);
+      if (!game) return;
+      if (prim) {
+        var p = P(prim);
+        p.games[game] = true;
+        if (type === 'Goal') p.G++;
+        else if (type === 'Shot') p.S++;
+        else if (type === 'SOG') p.SOG++;
+        else if (type === 'GB') p.GB++;
+        else if (type === 'CTO') p.CT++;
+        else if (type === 'TO') p.TO++;
+        else if (type === 'FOW') p.FW++;
+        else if (type === 'FOL') p.FL++;
+        else if (type === 'Save') p.SV++;
+        else if (type === 'GA') p.GA++;
+        else if (type === 'INT') p.INT++;
+        else if (type === 'Penalty') { p.PEN++; p.penSecs += Number(r[7]) || 0; }
+      }
+      if (sec) {
+        var s2 = P(sec);
+        s2.games[game] = true;
+        if (type === 'Goal') s2.A++;
+      }
+    });
+  }
+
+  // One row per player, in Players-tab order.
+  var rows = [];
+  if (players.getLastRow() >= 2) {
+    players.getRange(2, 1, players.getLastRow() - 1, 4).getValues().forEach(function(r) {
+      var id = String(r[0]).trim();
+      if (!id) return;
+      var s = st[id] || P(id);
+      var goalie = String(r[3]) === 'Goalie' || (s.SV + s.GA) > 0;
+      var v = {
+        'Player_ID': id, 'Player #': r[1], 'Player Name': r[2], 'Position': r[3],
+        'GP': Object.keys(s.games).length,
+        'G': s.G, 'A': s.A, 'Pts': s.G + s.A, 'S': s.S, 'SOG': s.SOG,
+        'Shooting %': s.S > 0 ? s.G / s.S : '',
+        'GB': s.GB, 'CT': s.CT, 'TO': s.TO, 'FW': s.FW, 'FL': s.FL,
+        'FO Win %': (s.FW + s.FL) > 0 ? s.FW / (s.FW + s.FL) : '',
+        'PEN': s.PEN, 'Pen Min': s.penSecs / 86400, // shown as [h]:mm:ss
+        'SV': goalie ? s.SV : '', 'GA': goalie ? s.GA : '',
+        'Save %': (s.SV + s.GA) > 0 ? s.SV / (s.SV + s.GA) : '',
+        'INT': s.INT
+      };
+      rows.push(headers.map(function(h) { return v.hasOwnProperty(h) ? v[h] : ''; }));
+    });
+  }
+
+  var last = sheet.getLastRow();
+  if (last >= 2) sheet.getRange(2, 1, last - 1, headers.length).clearContent();
+  if (rows.length) {
+    ensureRows_(sheet, rows.length + 1);
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    // Number formats (INT was formatted as a percentage).
+    var fmt = { 'Shooting %': '0.0%', 'FO Win %': '0.0%', 'Save %': '0.0%', 'Pen Min': '[h]:mm:ss', 'INT': '0' };
+    headers.forEach(function(h, i) {
+      if (fmt[h]) sheet.getRange(2, i + 1, rows.length, 1).setNumberFormat(fmt[h]);
+    });
+  }
+  return rows.length;
 }
 
 function buildResponse(data) {
@@ -543,7 +700,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Lacrosse Tools')
     .addItem('Generate Printable Scoresheet', 'generateScoresheetPDF')
-    .addItem('Rebuild Game Log', 'rebuildGameLog')
+    .addItem('Rebuild Stats (Game Log + Season Totals)', 'rebuildStats')
     .addToUi();
 }
 
