@@ -13,6 +13,14 @@
 var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
 
 /**
+ * Script version. The app asks for it (?action=version) to know it can use
+ * confirmed (JSON) saves. Bump it when the app<->script protocol changes.
+ *   1 = original (form post, unconfirmed)
+ *   2 = JSON replies, re-sync replaces the game, Game Log written by the script
+ */
+var SCRIPT_VERSION = 2;
+
+/**
  * Write PIN (Option 3 security).
  * The secret lives in Script Properties (File > Project Settings > Script Properties),
  * key WRITE_PIN, so it is NOT visible in the public app source. Change it there and the
@@ -55,21 +63,32 @@ function doGet(e) {
   if (action === 'getEvents') {
     return handleGetEvents(callback, e.parameter.gameId || '');
   }
+  if (action === 'version') {
+    return jsonResponse({ success: true, version: SCRIPT_VERSION });
+  }
 
   var output = ContentService.createTextOutput('Fishers Tigers Lacrosse Scorebook - Apps Script Active');
   output.setMimeType(ContentService.MimeType.TEXT);
   return output;
 }
 
+// Two kinds of caller:
+//  - App V3.24+ sends the JSON straight in the request body (fetch) and gets a
+//    JSON reply it can read, so it knows for sure whether the game saved.
+//  - Older app versions submit a hidden form (payload=...) and get the old HTML
+//    reply. Kept so devices that haven't updated yet keep working.
 function doPost(e) {
   var payload;
+  var legacy = false;
   try {
     if (e.parameter && e.parameter.payload) {
+      legacy = true;
       payload = JSON.parse(e.parameter.payload);
     } else if (e.postData && e.postData.contents) {
       var contents = e.postData.contents;
       if (contents.indexOf('payload=') === 0) {
-        var decoded = decodeURIComponent(contents.substring(8));
+        legacy = true;
+        var decoded = decodeURIComponent(contents.substring(8).replace(/\+/g, ' '));
         payload = JSON.parse(decoded);
       } else {
         payload = JSON.parse(contents);
@@ -78,19 +97,30 @@ function doPost(e) {
       return buildResponse({ success: false, error: 'No payload received' });
     }
   } catch (err) {
-    return buildResponse({ success: false, error: 'Failed to parse payload: ' + err.message });
+    var bad = { success: false, error: 'Failed to parse payload: ' + err.message };
+    return legacy ? buildResponse(bad) : jsonResponse(bad);
   }
 
+  var result = routePost_(payload);
+  return legacy ? buildResponse(result) : jsonResponse(result);
+}
+
+function routePost_(payload) {
   if (payload.test === true) {
-    return buildResponse({ success: true, message: 'Connection successful! Scorebook is linked.' });
+    return { success: true, version: SCRIPT_VERSION, message: 'Connection successful! Scorebook is linked.' };
   }
   if (payload.action === 'exportGame') {
     if (!pinOk_(payload)) {
-      return buildResponse({ success: false, error: 'INVALID_PIN', message: 'Incorrect or missing PIN. Stats were not saved.' });
+      return { success: false, error: 'INVALID_PIN', message: 'Incorrect or missing PIN. Stats were not saved.' };
     }
     return handleExportGame(payload.gameData);
   }
-  return buildResponse({ success: false, error: 'Unknown action' });
+  return { success: false, error: 'Unknown action' };
+}
+
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ============================================================
@@ -242,93 +272,274 @@ function handleGetEvents(callback, gameId) {
 // GAME EXPORT (events + game meta)
 // ============================================================
 
+var EVENT_HEADERS = ['Timestamp', 'Game_ID', 'Period', 'Action_Type', 'Primary_Player_ID',
+  'Secondary_Player_ID', 'Strength', 'Pen_Duration', 'Game_Clock', 'Penalty_Type', 'Penalty_Name', 'Zone_ID'];
+
+// Saves one game. Safe to call again for the same game (a re-sync, or a game
+// edited and sent again): that game's old Events rows are removed first and its
+// Games / Game Log rows are updated in place, so nothing is ever doubled.
 function handleExportGame(gameData) {
-  if (!gameData) {
-    return buildResponse({ success: false, error: 'No gameData provided' });
+  if (!gameData || !gameData.game || !gameData.game.Game_ID) {
+    return { success: false, error: 'No game data provided' };
   }
-
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var eventsWritten = 0;
-  var gameWritten = false;
-
+  // Only one save at a time, so two scorers syncing together can't overwrite
+  // each other's rows.
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    return { success: false, error: 'BUSY', message: 'Another game is being saved right now. Try again in a moment.' };
+  }
   try {
-    // --- Events ---
-    if (gameData.events && gameData.events.length > 0) {
-      var eventsSheet = ss.getSheetByName('Events');
-      if (!eventsSheet) {
-        eventsSheet = ss.insertSheet('Events');
-        eventsSheet.appendRow(['Timestamp', 'Game_ID', 'Period', 'Action_Type', 'Primary_Player_ID', 'Secondary_Player_ID', 'Strength', 'Pen_Duration', 'Game_Clock', 'Penalty_Type', 'Penalty_Name', 'Zone_ID']);
-      }
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var game = gameData.game;
+    var gameId = String(game.Game_ID);
+    var events = gameData.events || [];
 
-      var eventRows = [];
-      for (var i = 0; i < gameData.events.length; i++) {
-        var evt = gameData.events[i];
-        eventRows.push([
-          evt.Timestamp || '',
-          evt.Game_ID || '',
-          evt.Period || '',
-          evt.Action_Type || '',
-          evt.Primary_Player_ID || '',
-          evt.Secondary_Player_ID || '',
-          evt.Strength || '',
-          evt.Pen_Duration || '',
-          evt.Game_Clock || '',
-          evt.Penalty_Type || '',
-          evt.Penalty_Name || '',
-          evt.Zone_ID || ''
-        ]);
-      }
+    var removed = writeEvents_(ss, gameId, events);
+    writeGameRow_(ss, game);
+    writeGameLogRow_(ss, game, events);
+    SpreadsheetApp.flush();
 
-      var lastRow = eventsSheet.getLastRow();
-      eventsSheet.getRange(lastRow + 1, 1, eventRows.length, 12).setValues(eventRows);
-      eventsWritten = eventRows.length;
-    }
-
-    // --- Games (A-E identity/score, skip F=Game_Label formula, G-O meta) ---
-    if (gameData.game) {
-      var gamesSheet = ss.getSheetByName('Games');
-      if (!gamesSheet) {
-        gamesSheet = ss.insertSheet('Games');
-        gamesSheet.appendRow(['Game_ID', 'Date', 'Opponent', 'Location', 'Score', 'Game_Label',
-          'Weather_Temp', 'Weather_Cond', 'Game_Start', 'Head_Official', 'Umpire', 'Field_Judge',
-          'Tigers_Scorer', 'Tigers_Timer', 'Opp_Scorer']);
-      }
-
-      var g = gameData.game;
-      var newRow = gamesSheet.getLastRow() + 1;
-      // A-E: identity + score. Column F (Game_Label) is a formula - do NOT touch it.
-      gamesSheet.getRange(newRow, 1, 1, 5).setValues([[
-        g.Game_ID || '',
-        g.Date || '',
-        g.Opponent || '',
-        g.Location || '',
-        g.Score || ''
-      ]]);
-      // G-O: 9 meta columns, leaving F untouched.
-      gamesSheet.getRange(newRow, 7, 1, 9).setValues([[
-        g.Weather_Temp || '',
-        g.Weather_Cond || '',
-        g.Game_Start || '',
-        g.Head_Official || '',
-        g.Umpire || '',
-        g.Field_Judge || '',
-        g.Tigers_Scorer || '',
-        g.Tigers_Timer || '',
-        g.Opp_Scorer || ''
-      ]]);
-      gameWritten = true;
-    }
-
-    return buildResponse({
+    return {
       success: true,
-      message: 'Game exported successfully!',
-      eventsWritten: eventsWritten,
-      gameWritten: gameWritten
-    });
-
+      message: removed > 0 ? 'Game updated (replaced the earlier copy).' : 'Game exported successfully!',
+      gameId: gameId,
+      eventsWritten: events.length,
+      replaced: removed > 0
+    };
   } catch (err) {
-    return buildResponse({ success: false, error: 'Export failed: ' + err.message });
+    return { success: false, error: 'Export failed: ' + err.message };
+  } finally {
+    lock.releaseLock();
   }
+}
+
+// Make sure the sheet has at least `lastRowNeeded` rows (Sheets refuses to
+// write past the bottom of the grid, and Events outgrows 1,000 rows by the
+// 3rd or 4th game).
+function ensureRows_(sheet, lastRowNeeded) {
+  var max = sheet.getMaxRows();
+  if (lastRowNeeded > max) sheet.insertRowsAfter(max, lastRowNeeded - max);
+}
+
+// Row number (1-based) of the first data row whose `col` equals `value`, or -1.
+function findRow_(sheet, col, value) {
+  var last = sheet.getLastRow();
+  if (last < 2) return -1;
+  var vals = sheet.getRange(2, col, last - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) === String(value)) return i + 2;
+  }
+  return -1;
+}
+
+// Replace this game's rows on the Events tab. Returns how many old rows were removed.
+function writeEvents_(ss, gameId, events) {
+  var sheet = ss.getSheetByName('Events');
+  if (!sheet) {
+    sheet = ss.insertSheet('Events');
+    sheet.appendRow(EVENT_HEADERS);
+  }
+  // Remove any earlier copy of this game (bottom-up, in contiguous blocks).
+  var removed = 0;
+  var last = sheet.getLastRow();
+  if (last >= 2) {
+    var ids = sheet.getRange(2, 2, last - 1, 1).getValues();
+    var i = ids.length - 1;
+    while (i >= 0) {
+      if (String(ids[i][0]) === gameId) {
+        var end = i;
+        while (i - 1 >= 0 && String(ids[i - 1][0]) === gameId) i--;
+        sheet.deleteRows(i + 2, end - i + 1);
+        removed += end - i + 1;
+      }
+      i--;
+    }
+  }
+  if (!events.length) return removed;
+
+  var rows = events.map(function(evt) {
+    return [
+      evt.Timestamp || '', gameId, evt.Period || '', evt.Action_Type || '',
+      evt.Primary_Player_ID || '', evt.Secondary_Player_ID || '', evt.Strength || '',
+      evt.Pen_Duration || '', evt.Game_Clock || '', evt.Penalty_Type || '',
+      evt.Penalty_Name || '', evt.Zone_ID || ''
+    ];
+  });
+  var start = sheet.getLastRow() + 1;
+  ensureRows_(sheet, start + rows.length - 1);
+  sheet.getRange(start, 1, rows.length, EVENT_HEADERS.length).setValues(rows);
+  return removed;
+}
+
+// "2026-04-15 - Carmel (Home)": the label the Scoresheet Template dropdown lists.
+function gameLabel_(g) {
+  var d = String(g.Date || '');
+  if (Object.prototype.toString.call(g.Date) === '[object Date]') {
+    d = Utilities.formatDate(g.Date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  return d + ' - ' + (g.Opponent || '') + ' (' + (g.Location || '') + ')';
+}
+
+// Add or update this game's row on the Games tab (A-O, including the label in F).
+function writeGameRow_(ss, g) {
+  var sheet = ss.getSheetByName('Games');
+  if (!sheet) {
+    sheet = ss.insertSheet('Games');
+    sheet.appendRow(['Game_ID', 'Date', 'Opponent', 'Location', 'Score', 'Game_Label',
+      'Weather_Temp', 'Weather_Cond', 'Game_Start', 'Head_Official', 'Umpire', 'Field_Judge',
+      'Tigers_Scorer', 'Tigers_Timer', 'Opp_Scorer']);
+  }
+  var row = findRow_(sheet, 1, g.Game_ID);
+  if (row === -1) {
+    row = sheet.getLastRow() + 1;
+    ensureRows_(sheet, row);
+  }
+  sheet.getRange(row, 1, 1, 15).setValues([[
+    g.Game_ID || '', g.Date || '', g.Opponent || '', g.Location || '', g.Score || '',
+    gameLabel_(g),
+    g.Weather_Temp || '', g.Weather_Cond || '', g.Game_Start || '', g.Head_Official || '',
+    g.Umpire || '', g.Field_Judge || '', g.Tigers_Scorer || '', g.Tigers_Timer || '',
+    g.Opp_Scorer || ''
+  ]]);
+}
+
+// ============================================================
+// GAME LOG (one row of team totals per game)
+// Written as plain numbers when a game is saved, instead of ~2,500 live
+// COUNTIFS formulas that recalculated on every edit. Columns are matched by
+// their header names in row 1, so the tab's column order can change safely.
+// Lacrosse Tools > Rebuild Game Log recalculates every game from the Events tab
+// (use it after editing Events by hand).
+// ============================================================
+var GL_PERIODS = ['Q1', 'Q2', 'Q3', 'Q4', 'OT1', 'OT2'];
+
+function gameLogValues_(g, events) {
+  var v = {};
+  function countBy(actionType, prefix, totalName) {
+    var tot = 0;
+    GL_PERIODS.forEach(function(p) {
+      var n = 0;
+      events.forEach(function(e) { if (e.Action_Type === actionType && e.Period === p) n++; });
+      v[prefix + '_' + p] = n;
+      tot += n;
+    });
+    v[totalName || (prefix + '_Tot')] = tot;
+    return tot;
+  }
+  function pct(a, b) { return (a + b) > 0 ? a / (a + b) : ''; }
+  function isOpp(e) { return String(e.Primary_Player_ID || '').indexOf('Opp') === 0; }
+  function count(fn) { var n = 0; events.forEach(function(e) { if (fn(e)) n++; }); return n; }
+  function sumMin(fn) {
+    var s = 0;
+    events.forEach(function(e) { if (fn(e)) s += Number(e.Pen_Duration) || 0; });
+    return s / 60;
+  }
+
+  v.Date = g.Date || '';
+  v.Opponent = g.Opponent || '';
+  v.Location = g.Location || '';
+  v.Game_ID = g.Game_ID || '';
+  var us = countBy('Goal', 'Tigers', 'Tigers_Final');
+  var them = countBy('Opp_Goal', 'Opp', 'Opp_Final');
+  v.Result = us > them ? 'W' : (us < them ? 'L' : 'T');
+  countBy('GB', 'GB');
+  countBy('Shot', 'Shots');
+  countBy('SOG', 'SOG');
+  var cg = countBy('Clear_Good', 'ClearSucc');
+  var cf = countBy('Clear_Fail', 'ClearFail');
+  v.Clear_Pct = pct(cg, cf);
+  var fw = countBy('FOW', 'FOWon');
+  var fl = countBy('FOL', 'FOLost');
+  v.FO_Pct = pct(fw, fl);
+  countBy('Save', 'Sv');
+  v.EMO_Success = count(function(e) { return e.Action_Type === 'EMO_Success'; });
+  v.EMO_Fail = count(function(e) { return e.Action_Type === 'EMO_Fail'; });
+  v.EMO_Pct = pct(v.EMO_Success, v.EMO_Fail);
+  function pen(e) { return e.Action_Type === 'Penalty'; }
+  v.Pen_Count_Tigers = count(function(e) { return pen(e) && !isOpp(e); });
+  v.Pen_Min_Tigers = sumMin(function(e) { return pen(e) && !isOpp(e); });
+  v.Personal_Count_Tigers = count(function(e) { return pen(e) && !isOpp(e) && e.Penalty_Type === 'Personal'; });
+  v.Ejections_Tigers = count(function(e) { return e.Action_Type === 'Ejection' && !isOpp(e); });
+  v.Pen_Count_Opp = count(function(e) { return pen(e) && isOpp(e); });
+  v.Pen_Min_Opp = sumMin(function(e) { return pen(e) && isOpp(e); });
+  return v;
+}
+
+function gameLogHeaders_(sheet) {
+  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+}
+
+// One-time switch-over: the old Game Log held a formula in every row. Clear
+// them, then rebuild every game already on the Events tab as plain numbers.
+function migrateGameLogIfNeeded_(ss, sheet) {
+  var last = sheet.getLastRow();
+  if (last < 2) return;
+  var f = sheet.getRange(2, 1, 1, Math.min(5, sheet.getLastColumn())).getFormulas()[0];
+  if (f.join('') === '') return;
+  rebuildGameLog_(ss);
+}
+
+function writeGameLogRow_(ss, g, events) {
+  var sheet = ss.getSheetByName('Game Log');
+  if (!sheet) return; // tab is optional
+  migrateGameLogIfNeeded_(ss, sheet);
+  var headers = gameLogHeaders_(sheet);
+  var idCol = headers.indexOf('Game_ID') + 1;
+  if (idCol === 0) return;
+  var v = gameLogValues_(g, events);
+  var rowVals = headers.map(function(h) { return v.hasOwnProperty(h) ? v[h] : ''; });
+  var row = findRow_(sheet, idCol, g.Game_ID);
+  if (row === -1) {
+    row = Math.max(sheet.getLastRow(), 1) + 1;
+    ensureRows_(sheet, row);
+  }
+  sheet.getRange(row, 1, 1, headers.length).setValues([rowVals]);
+}
+
+// Recalculate the whole Game Log from the Games + Events tabs.
+function rebuildGameLog_(ss) {
+  var sheet = ss.getSheetByName('Game Log');
+  var gamesSheet = ss.getSheetByName('Games');
+  var eventsSheet = ss.getSheetByName('Events');
+  if (!sheet || !gamesSheet) return 0;
+  var headers = gameLogHeaders_(sheet);
+  if (sheet.getLastRow() >= 2) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).clearContent();
+  }
+  var tz = Session.getScriptTimeZone();
+  var byGame = {};
+  if (eventsSheet && eventsSheet.getLastRow() >= 2) {
+    eventsSheet.getRange(2, 1, eventsSheet.getLastRow() - 1, EVENT_HEADERS.length).getValues().forEach(function(r) {
+      var id = String(r[1]);
+      if (!id) return;
+      (byGame[id] = byGame[id] || []).push({
+        Period: String(r[2]), Action_Type: String(r[3]), Primary_Player_ID: String(r[4]),
+        Pen_Duration: r[7], Penalty_Type: String(r[9])
+      });
+    });
+  }
+  var rows = [];
+  if (gamesSheet.getLastRow() >= 2) {
+    gamesSheet.getRange(2, 1, gamesSheet.getLastRow() - 1, 5).getValues().forEach(function(r) {
+      if (!r[0]) return;
+      var date = r[1];
+      if (Object.prototype.toString.call(date) === '[object Date]') date = Utilities.formatDate(date, tz, 'yyyy-MM-dd');
+      var g = { Game_ID: String(r[0]), Date: date, Opponent: r[2], Location: r[3] };
+      var v = gameLogValues_(g, byGame[g.Game_ID] || []);
+      rows.push(headers.map(function(h) { return v.hasOwnProperty(h) ? v[h] : ''; }));
+    });
+  }
+  if (rows.length) {
+    ensureRows_(sheet, rows.length + 1);
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  }
+  return rows.length;
+}
+
+// Menu item: Lacrosse Tools > Rebuild Game Log
+function rebuildGameLog() {
+  var n = rebuildGameLog_(SpreadsheetApp.getActiveSpreadsheet());
+  SpreadsheetApp.getUi().alert('Game Log rebuilt: ' + n + ' game(s).');
 }
 
 function buildResponse(data) {
@@ -353,6 +564,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Lacrosse Tools')
     .addItem('Generate Printable Scoresheet', 'generateScoresheetPDF')
+    .addItem('Rebuild Game Log', 'rebuildGameLog')
     .addToUi();
 }
 
