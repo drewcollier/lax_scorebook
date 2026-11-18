@@ -12,11 +12,10 @@ Total setup time: about 5 minutes.
 
 - A phone, tablet, or laptop with internet.
 - The **app web address**: https://drewcollier.github.io/lax_scorebook/
-- The **Script Link** (a long web address I will send you — this connects the
-  app to our team's stats sheet).
-- The **Stats PIN** (a short number I will send you — needed to save a game).
+- The **Stats PIN** (a short number I will send you — needed to load the roster
+  and to save a game). Keep it to yourself; don't write it on the tablet.
 
-> Keep the Script Link and PIN handy. You'll paste them in during setup.
+> The app is already connected to our team's stats sheet. There's no link to paste.
 
 ---
 
@@ -34,35 +33,29 @@ Total setup time: about 5 minutes.
 > - **Android:** tap the menu (three dots), then "Add to Home screen."
 >   This gives you a tap-to-open icon so you don't have to type the address again.
 
-### Step 2: Connect the app to our stats sheet
+### Step 2: Make sure the connection works
 
 1. Tap the **Settings** button at the top.
-2. Find the box labeled **"Google Apps Script URL."**
-3. **Paste the Script Link** I sent you into that box.
-   - To paste: tap and hold inside the box, then choose **Paste**.
-4. Tap **Save**.
+2. Leave the **Google Apps Script URL** box **blank** — the team's link is built in.
+3. Tap **Test Connection**. You should see **"Connected! … Saves will be confirmed."**
+   - ✅ **If it says connected** — you're good, go to Step 3.
+   - ❌ **If it shows an error** — check you have internet and try again. If it
+     still fails, contact me.
 
-![Settings: paste the Script Link, then tap Save](guide-images/settings.png)
-
-### Step 3: Make sure the connection works
-
-1. Still on the **Settings** screen, tap **Test Connection**.
-2. You should see a small message confirming it connected.
-   - ✅ **If it says connected** — you're good, go to Step 4.
-   - ❌ **If it shows an error** — double-check you pasted the **entire** Script
-     Link (they're long and easy to cut off). Re-paste it, tap **Save**, and try
-     **Test Connection** again. If it still fails, contact me.
-
-### Step 4: Load the team roster
+### Step 3: Load the team roster
 
 1. Tap the **Roster** button at the top.
-2. Tap **Pull Roster from Sheets**. The player list fills in automatically.
-3. Tap **Pull Officials from Sheets** (this loads the referee/officials names
-   you'll pick from before a game).
+2. Tap **Pull Roster from Sheets** and type the **Stats PIN** when asked. The
+   player list fills in automatically.
+3. Tap **Pull Officials from Sheets** and type the PIN again (this loads the
+   referee/officials names you'll pick from before a game).
+
+> The app asks for the PIN **every time** and never stores it, so it's safe to hand
+> the tablet to someone else.
 
 ![Roster: tap Pull Roster from Sheets](guide-images/roster.png)
 
-That's it — setup is done. You won't need to repeat Parts 1–4 on this device.
+That's it — setup is done. You won't need to repeat this on this device.
 
 ---
 
@@ -218,18 +211,20 @@ After you enter the goal's time, the app compares it with when each penalty star
 ---
 ## Part 4 — Saving the game (the PIN)
 
-When the game ends and you save it to the team sheet, the app will ask for the
-**Stats PIN** the first time on your device.
+When you tap **END GAME**, the app asks for the **Stats PIN** to save the game to
+the team sheet.
 
-1. When prompted, type the **Stats PIN** I sent you.
-2. The app remembers it on that device, so you won't be asked again.
+- **Know the PIN?** Type it and tap OK.
+- **Coach saves it instead?** Tap **Cancel**. The game stays safely in **History**.
+  Hand the tablet to the coach, who opens **History**, taps **Press to sync**, and
+  types the PIN.
 
-> **Why the PIN?** It protects our official stats so only our scorekeepers can
-> save games. Viewing the app, loading the roster, and keeping score never need
-> the PIN — only **saving** a finished game does.
+> **Why the PIN?** It protects our official stats and the players' names. Loading
+> the roster/officials and saving a game need it; keeping score never does.
+> The app asks for it every time and does not store it.
 
-If you ever mistype it or need to change it:
-- Go to **Settings** → **Stats PIN** → **Change / Clear Saved PIN**.
+**Coach's own phone:** in **Settings → Stats PIN** you can tick **Remember the PIN
+on this device** so it's only asked once. Don't tick it on a shared tablet.
 
 ### How you know it saved
 
@@ -237,9 +232,9 @@ If you ever mistype it or need to change it:
   for Google to confirm. You'll see **Saved "…" to the workbook ✓** and the game
   shows **Synced ✓** on the **History** screen.
 - **No signal at the field?** That's fine. The game stays on your device and the
-  History screen shows **Press to sync** with *"No connection - will retry
-  automatically"*. It sends itself as soon as you're back online or the next time
-  you open the app. You can also tap **Press to sync** yourself.
+  History screen shows **Press to sync**. Once you have signal, tap **Press to
+  sync** and enter the PIN. (On a device with **Remember the PIN** ticked, it sends
+  itself as soon as you're back online.)
 - Sending a game again is always safe: it replaces that game in the sheet, it
   never adds it twice.
 
@@ -249,17 +244,19 @@ If you ever mistype it or need to change it:
 
 | What you see | What to do |
 |---|---|
-| "Set Apps Script URL in Settings first" | You skipped Part 1, Step 2. Go to **Settings**, paste the Script Link, tap **Save**. |
+| "No Apps Script link is set up" | Go to **Settings**, make sure the **Google Apps Script URL** box is **blank**, tap **Save**. |
 | Roster is empty | Tap **Roster** → **Pull Roster from Sheets**. |
-| **Test Connection** fails | Re-paste the **full** Script Link (they get cut off easily), tap **Save**, try again. |
+| **Test Connection** fails | Check your internet. Make sure the **Google Apps Script URL** box is blank (or holds the exact link you were given), tap **Save**, try again. |
 | App looks like an old version | Fully close the browser and reopen it. |
 | "Jersey # doesn't exist on the roster" | That number is not on the roster. Tap **Re-enter**, or pull the roster again if it is out of date. |
 | EVEN / MAN-UP / MAN-DOWN won't respond when tapped | They are indicators. Add or remove penalties in the **Active penalties** box and they update on their own. |
 | "Penalty already expired" message after a goal | A penalty had run out before the goal. Tap **OK**. Next time, tap **Served** when a penalty ends. |
-| History says "No connection - will retry automatically" | Nothing to do. It syncs on its own once you have signal (or tap **Press to sync**). |
+| History says "No connection" | Once you have signal, tap **Press to sync** and enter the PIN. |
 | History says "Wrong PIN - tap to try again" | Tap **Press to sync** and type the correct **Stats PIN**. |
 | **Test Connection** says the script is "an older version" | Let me know — the team's Apps Script needs its update. Games still save, but can't be confirmed until then. |
-| Game won't save / asks for PIN | Type the **Stats PIN** I sent you. If rejected, use **Settings → Stats PIN → Change / Clear Saved PIN** and re-enter it. |
+| "Incorrect PIN" / "Wrong PIN" | Try again with the **Stats PIN** I sent you. If you're not sure of it, contact me. |
+| "The PIN has not been set up in the Apps Script" | Contact me — this is a setting on my side. |
+| "The team's Apps Script is out of date" | Contact me — the script needs its update. |
 
 ---
 
@@ -269,6 +266,6 @@ If you ever mistype it or need to change it:
 - [ ] Roster is loaded and current
 - [ ] Opponent, date, and location entered on the **Game** tab
 - [ ] **By Stat** is selected on the Game tab
-- [ ] Stats PIN handy for saving at the end
+- [ ] Stats PIN known by whoever will save the game (you or the coach)
 
 **Questions or anything looks off? Contact Drew Collier: 317-658-4777 or andrew.collier@gmail.com**
