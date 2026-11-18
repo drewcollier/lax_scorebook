@@ -19,8 +19,9 @@ var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
  *   2 = JSON replies, re-sync replaces the game, Game Log written by the script
  *   3 = every data read needs the PIN too (sent in a POST body, never in a URL)
  *   4 = Season Totals written by the script; permanent player IDs (P001...)
+ *   5 = MaxPreps Export tab written by the script (season to date)
  */
-var SCRIPT_VERSION = 4;
+var SCRIPT_VERSION = 5;
 
 /**
  * The scorekeeper PIN.
@@ -278,6 +279,7 @@ function handleExportGame(gameData) {
     writeGameRow_(ss, game);
     writeGameLogRow_(ss, game, events);
     rebuildSeasonTotals_(ss);
+    rebuildMaxPreps_(ss);
     SpreadsheetApp.flush();
 
     return {
@@ -525,9 +527,95 @@ function rebuildStats() {
   var ids = assignPlayerIds_(ss);
   var games = rebuildGameLog_(ss);
   var players = rebuildSeasonTotals_(ss);
-  SpreadsheetApp.getUi().alert('Stats rebuilt: ' + games + ' game(s), ' + players + ' player(s)'
+  rebuildMaxPreps_(ss);
+  SpreadsheetApp.getUi().alert('Stats rebuilt (Game Log, Season Totals, MaxPreps Export): ' + games + ' game(s), ' + players + ' player(s)'
     + (ids ? ', ' + ids + ' new player ID(s) assigned.' : '.'));
 }
+// ============================================================
+// MAXPREPS EXPORT (season to date, MaxPreps boys lacrosse stat-sheet columns)
+// Same rules as the app's per-game MaxPreps file:
+//  TA = caused turnovers, UE = turnovers, FA = faceoffs won + lost.
+//  Goalie MIN / W / L / T / Shut Out come only from games where exactly one
+//  goalie recorded saves or goals allowed: that goalie played the whole game
+//  (48 min + 4 per overtime) and gets the decision. Games with two goalies add
+//  their GA/SV but leave minutes and decisions for the coach to enter.
+//  P = penalties, PM/PS = total penalty time as minutes + leftover seconds.
+// Columns are matched by the header names in row 1.
+// ============================================================
+function rebuildMaxPreps_(ss) {
+  var sheet = ss.getSheetByName('MaxPreps Export');
+  var players = ss.getSheetByName('Players');
+  if (!sheet || !players) return 0;
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+
+  var st = {};
+  function P(id) {
+    if (!st[id]) st[id] = { G: 0, A: 0, SOG: 0, GB: 0, INT: 0, TA: 0, UE: 0, FW: 0, FL: 0,
+      GA: 0, SV: 0, inGoal: false, MIN: 0, SO: 0, W: 0, L: 0, T: 0, decided: false, P: 0, secs: 0 };
+    return st[id];
+  }
+  var games = {};
+  var ev = ss.getSheetByName('Events');
+  if (ev && ev.getLastRow() >= 2) {
+    ev.getRange(2, 1, ev.getLastRow() - 1, EVENT_HEADERS.length).getValues().forEach(function(r) {
+      var gid = String(r[1]), per = String(r[2]), type = String(r[3]), prim = String(r[4]), sec = String(r[5]);
+      if (!gid) return;
+      var gm = games[gid] = games[gid] || { us: 0, them: 0, ot: {}, goalies: {} };
+      if (per === 'OT1' || per === 'OT2') gm.ot[per] = true;
+      if (type === 'Goal') { gm.us++; if (prim) P(prim).G++; if (sec) P(sec).A++; }
+      else if (type === 'Opp_Goal') gm.them++;
+      else if (!prim || prim.indexOf('Opp') === 0) return;
+      else if (type === 'SOG') P(prim).SOG++;
+      else if (type === 'GB') P(prim).GB++;
+      else if (type === 'INT') P(prim).INT++;
+      else if (type === 'CTO') P(prim).TA++;
+      else if (type === 'TO') P(prim).UE++;
+      else if (type === 'FOW') P(prim).FW++;
+      else if (type === 'FOL') P(prim).FL++;
+      else if (type === 'Save') { P(prim).SV++; P(prim).inGoal = true; gm.goalies[prim] = true; }
+      else if (type === 'GA') { P(prim).GA++; P(prim).inGoal = true; gm.goalies[prim] = true; }
+      else if (type === 'Penalty') { P(prim).P++; P(prim).secs += Number(r[7]) || 0; }
+    });
+  }
+  Object.keys(games).forEach(function(gid) {
+    var gm = games[gid];
+    var gs = Object.keys(gm.goalies);
+    if (gs.length !== 1) return;
+    var s = P(gs[0]);
+    s.decided = true;
+    s.MIN += 48 + 4 * Object.keys(gm.ot).length;
+    if (gm.them === 0) s.SO++;
+    if (gm.us > gm.them) s.W++; else if (gm.us < gm.them) s.L++; else s.T++;
+  });
+
+  var rows = [];
+  if (players.getLastRow() >= 2) {
+    var list = players.getRange(2, 1, players.getLastRow() - 1, 3).getValues().filter(function(r) { return String(r[0]).trim(); });
+    list.sort(function(a, b) { return (parseInt(a[1], 10) || 999) - (parseInt(b[1], 10) || 999); });
+    list.forEach(function(r) {
+      var s = st[String(r[0]).trim()] || P(String(r[0]).trim());
+      var v = {
+        '#': r[1], 'Player Name': r[2], 'Goals': s.G, 'Asst': s.A, 'SOG': s.SOG, 'GB': s.GB, 'INT': s.INT,
+        'TA': s.TA, 'UE': s.UE, 'FW': s.FW, 'FA': s.FW + s.FL,
+        'MIN': s.decided ? s.MIN : '', 'GA': s.inGoal ? s.GA : '', 'SV': s.inGoal ? s.SV : '',
+        'Shut Out': s.decided ? s.SO : '', 'W': s.decided ? s.W : '', 'L': s.decided ? s.L : '', 'T': s.decided ? s.T : '',
+        'P': s.P, 'PM': Math.floor(s.secs / 60), 'PS': s.secs % 60
+      };
+      rows.push(headers.map(function(h) { return v.hasOwnProperty(h) ? v[h] : ''; }));
+    });
+  }
+  var last = sheet.getLastRow();
+  if (last >= 2) sheet.getRange(2, 1, last - 1, headers.length).clearContent();
+  if (rows.length) {
+    ensureRows_(sheet, rows.length + 1);
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    sheet.getRange(2, 1, rows.length, headers.length).setNumberFormat('0');
+    var nameCol = headers.indexOf('Player Name');
+    if (nameCol !== -1) sheet.getRange(2, nameCol + 1, rows.length, 1).setNumberFormat('@');
+  }
+  return rows.length;
+}
+
 // Older menu name, kept so a bookmarked/assigned run still works.
 function rebuildGameLog() { rebuildStats(); }
 
@@ -588,6 +676,7 @@ function onEdit(e) {
   var ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
   assignPlayerIds_(ss);
   rebuildSeasonTotals_(ss);
+  rebuildMaxPreps_(ss);
 }
 
 // ============================================================
@@ -700,7 +789,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Lacrosse Tools')
     .addItem('Generate Printable Scoresheet', 'generateScoresheetPDF')
-    .addItem('Rebuild Stats (Game Log + Season Totals)', 'rebuildStats')
+    .addItem('Rebuild Stats (Game Log, Season Totals, MaxPreps)', 'rebuildStats')
     .addToUi();
 }
 
@@ -853,8 +942,8 @@ function generateScoresheetPDF() {
   var otOpp = oppGoalQ.OT1 + oppGoalQ.OT2;
 
   // Roster grouped by position, field order.
-  var ORDER = ['Attack','Midfield','FOGO','Defense','Goalie'];
-  var LABEL = { Attack:'ATTACK', Midfield:'MIDFIELD', FOGO:'FOGO', Defense:'DEFENSE', Goalie:'GOALIE' };
+  var ORDER = ['Attack','Midfield','FOGO','LSM','Defense','Goalie'];
+  var LABEL = { Attack:'ATTACK', Midfield:'MIDFIELD', FOGO:'FOGO', LSM:'LSM', Defense:'DEFENSE', Goalie:'GOALIE' };
   var groups = {}; ORDER.forEach(function(g){ groups[g] = []; }); groups['Other'] = [];
   for (var pid in playerMap) {
     var pl = playerMap[pid];
@@ -963,7 +1052,8 @@ function generateScoresheetPDF() {
 
   // Scoring timeline (27 cells, wraps in CSS grid).
   var timelineCells = '';
-  for (var t = 0; t < 27; t++) {
+  var cells = Math.max(28, Math.ceil(goals.length / 14) * 14); // every goal, wrapping to more rows
+  for (var t = 0; t < cells; t++) {
     var gl = goals[t];
     timelineCells += '<div class="tl-cell"><div class="tl-n">' + (t+1) + '</div><div class="tl-v">'
       + (gl ? ('<b>#' + esc(gl.scorer) + (gl.assist ? '/' + esc(gl.assist) : '') + '</b><br><span>' + esc(gl.clock) + '</span>') : '&nbsp;')
