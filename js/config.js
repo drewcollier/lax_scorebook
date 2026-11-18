@@ -8,4 +8,4 @@ var DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxd7sWlkDhDcL4
 
 // The family sign-up Google Form (shown on the viewer's sign-in screen). Leave '' to
 // show "Ask the coach for the sign-up form" instead.
-var SIGNUP_FORM_URL = '';
+var SIGNUP_FORM_URL = 'https://forms.gle/JwJAM6w6zq8VPtK4A';
