@@ -238,6 +238,21 @@ on this device** so it's only asked once. Don't tick it on a shared tablet.
 - Sending a game again is always safe: it replaces that game in the sheet, it
   never adds it twice.
 
+### After the game: scoresheet and MaxPreps file
+
+Open **History**. Each game has two buttons (no PIN or signal needed):
+
+- **Scoresheet** — the official one-page scoresheet. Tap **Print / Save PDF**:
+  print it, or pick **Save as PDF** as the printer to keep or email a copy.
+  Tap **Close** to go back.
+- **MaxPreps file** — downloads a spreadsheet (CSV) with that game's player stats
+  in exactly MaxPreps' column order, ready for the coach to enter on MaxPreps.
+  Goalie minutes and W/L/T are filled in when one goalie played the whole game;
+  if two goalies played, those boxes are left blank for the coach.
+
+> History keeps the last few games on the device. For the whole season, the
+> team sheet's **MaxPreps Export** tab has season-to-date totals in the same columns.
+
 ---
 
 ## Quick troubleshooting

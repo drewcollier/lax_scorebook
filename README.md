@@ -56,12 +56,21 @@ Script URL on a device overrides it for that device only.
 | **Game Log** | Script | Team totals per game (plain numbers). |
 | **Season Totals** | Script | One row per player, rebuilt every time a game is saved and whenever Players is edited. |
 | **Scoresheet Template** | You | Pick a game in B2, then **Lacrosse Tools -> Generate Printable Scoresheet**. |
-| **MaxPreps Export**, **Definitions** | - | Unchanged for now. |
+| **MaxPreps Export** | Script | Season-to-date stats in MaxPreps' boys lacrosse stat-sheet columns (TA = caused turnovers, UE = turnovers, FA = faceoffs won + lost, PM/PS = penalty minutes + leftover seconds). Goalie MIN/W/L/T/Shut Out only from games where one goalie played the whole game (48 min + 4 per OT). |
+| **Definitions** | You | Stat glossary. |
 
 Don't type into the script-filled tabs: your changes would be overwritten.
 After editing **Events** by hand, run **Lacrosse Tools -> Rebuild Stats
-(Game Log + Season Totals)**.
+(Game Log, Season Totals, MaxPreps)**.
 
 Add players on the **Players** tab, then **Pull Roster** in the app. A player
 added only inside the app (Roster screen -> add player) still has their plays
 saved to Events, but they won't appear in Season Totals.
+
+## Scoresheet and MaxPreps file in the app
+
+History -> **Scoresheet** builds the one-page landscape scoresheet on the device
+(print or Save as PDF; it scales itself to fit one page). History ->
+**MaxPreps file** downloads that game's stats as a CSV in MaxPreps' column
+order. Both work offline. The Sheet's own *Lacrosse Tools -> Generate Printable
+Scoresheet* still works too.
