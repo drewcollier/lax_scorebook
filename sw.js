@@ -6,9 +6,25 @@
 // - Bump CACHE_VERSION on every release: devices then download the whole new
 //   version at once and the app shows a "new version ready - Reload" bar.
 // - Requests to other sites (the Google Apps Script) are never touched.
-const CACHE_VERSION = 'lax-scorebook-v30';
+const CACHE_VERSION = 'lax-scorebook-v31';
 const ASSETS = [
   './', './index.html', './viewer.html', './manifest.json', './logo.png',
+  './css/app.css', './css/viewer.css',
+  './js/config.js',
+  './js/boot.js',
+  './js/state.js',
+  './js/game.js',
+  './js/active-penalties.js',
+  './js/stat-entry.js',
+  './js/actions.js',
+  './js/event-log.js',
+  './js/roster.js',
+  './js/sync.js',
+  './js/settings.js',
+  './js/exports.js',
+  './js/history.js',
+  './js/main.js',
+  './js/viewer.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png'
 ];
@@ -35,22 +51,17 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;                                  // saves etc. go straight to the network
   if (new URL(req.url).origin !== self.location.origin) return;      // Apps Script & other sites: hands off
 
-  const isPage = req.mode === 'navigate' || /\/(index|viewer)\.html$/.test(new URL(req.url).pathname) ||
-                 new URL(req.url).pathname.endsWith('/');
-  if (isPage) {
-    // Saved copy first (instant), refresh it in the background for next time.
-    e.respondWith(caches.open(CACHE_VERSION).then((cache) =>
-      cache.match(req, { ignoreSearch: true }).then((cached) => {
-        const fresh = fetch(req.url, { cache: 'no-cache' }).then((resp) => { // ask the server, not the HTTP cache
-          if (resp && resp.ok) cache.put(req, resp.clone());
-          return resp;
-        }).catch(() => cached || cache.match('./index.html'));
-        if (cached) { e.waitUntil(fresh.catch(() => {})); return cached; }
-        return fresh;
-      })
-    ));
-    return;
-  }
-  // Logo, icons, manifest: saved copy, else network.
-  e.respondWith(caches.match(req).then((r) => r || fetch(req)));
+  // Every app file (pages, styles, scripts, images): saved copy first (instant,
+  // works offline), refreshed from the server in the background for next time.
+  // All files refresh together, so a page never runs with out-of-date scripts.
+  e.respondWith(caches.open(CACHE_VERSION).then((cache) =>
+    cache.match(req, { ignoreSearch: true }).then((cached) => {
+      const fresh = fetch(req.url, { cache: 'no-cache' }).then((resp) => { // ask the server, not the HTTP cache
+        if (resp && resp.ok) cache.put(req, resp.clone());
+        return resp;
+      }).catch(() => cached || (req.mode === 'navigate' ? cache.match('./index.html') : undefined));
+      if (cached) { e.waitUntil(fresh.catch(() => {})); return cached; }
+      return fresh;
+    })
+  ));
 });
