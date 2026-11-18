@@ -85,7 +85,7 @@
         <select id="gamePick" onchange="onGameChange()"><option value="">— loading games —</option></select>
       </div>
       <div style="flex:0; display:flex; align-items:flex-end; gap:6px;">
-        <button class="btn sec" onclick="reloadGames()">Refresh</button>
+        <button class="btn sec" onclick="bootstrap()">Refresh</button>
         <button class="btn sec" onclick="showUrl()">URL</button>
       </div>
     </div>
@@ -145,26 +145,45 @@
 
 <script>
 // ---------- Config / state ----------
+// Same built-in link as the scorebook app. "URL" can override it on this device.
+var DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxd7sWlkDhDcL4Sgs01lspwPrBOBodRsyH3hfJ5CHXWvZWffzYgrPnFbhu8oQpG6-Sn3g/exec';
 var URL_KEY = 'lax_viewer_scriptUrl';
-var V = { url: '', games: [], players: {}, events: [], gameId: '', gameRec: null,
+var V = { url: '', pin: '', games: [], players: {}, events: [], gameId: '', gameRec: null,
           active: { goal:true, sog:true, shot:true }, dots: [] };
 
 function $(id){ return document.getElementById(id); }
 function setStatus(m){ $('setupStatus').textContent = m || ''; }
+// Escape text before it goes into innerHTML (names always show exactly as typed).
+function esc(x){
+  if (x === null || x === undefined) return '';
+  return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
-// ---------- JSONP ----------
-function jsonp(action, params, onOk, onErr) {
+// ---------- Talking to the Apps Script ----------
+// Reading needs the scorekeeper PIN for now (family sign-in replaces this in a
+// later update). The PIN is asked once per visit and kept only in memory: it is
+// never stored and never put in a URL.
+function api(action, params, onOk, onErr) {
   if (!V.url) { showUrl(); setStatus('Enter the Apps Script URL first.'); return; }
-  var cb = 'cb_' + action + '_' + Date.now() + '_' + Math.floor(Math.random()*1e4);
-  var script = document.createElement('script');
-  var timer = setTimeout(function(){ cleanup(); if (onErr) onErr('timeout'); }, 15000);
-  function cleanup(){ clearTimeout(timer); delete window[cb]; if (script.parentNode) script.parentNode.removeChild(script); }
-  window[cb] = function(data){ cleanup(); onOk(data); };
-  var qs = '?action=' + action + '&callback=' + cb;
-  for (var k in params) if (params[k] !== undefined && params[k] !== '') qs += '&' + k + '=' + encodeURIComponent(params[k]);
-  script.src = V.url + qs;
-  script.onerror = function(){ cleanup(); if (onErr) onErr('error'); };
-  document.head.appendChild(script);
+  if (!V.pin) {
+    V.pin = (window.prompt('Enter the stats PIN to view the stats:') || '').trim();
+    if (!V.pin) { setStatus('A PIN is needed to view the stats. Tap Refresh to try again.'); return; }
+  }
+  var body = { action: action, pin: V.pin };
+  for (var k in params) body[k] = params[k];
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 20000);
+  fetch(V.url, { method: 'POST', body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
+    .then(function(r){ return r.text(); })
+    .then(function(t){
+      clearTimeout(timer);
+      var d; try { d = JSON.parse(t); } catch (e) { if (onErr) onErr('reply'); return; }
+      if (d && d.error === 'INVALID_PIN') { V.pin = ''; setStatus('Incorrect PIN. Tap Refresh to try again.'); return; }
+      if (d && d.success === false && d.message) { setStatus(d.message); return; }
+      onOk(d);
+    })
+    .catch(function(){ clearTimeout(timer); if (onErr) onErr('error'); });
 }
 
 // ---------- URL handling ----------
@@ -180,7 +199,7 @@ function saveUrl(){
 // ---------- Bootstrap: roster + games ----------
 function bootstrap(){
   setStatus('Loading roster…');
-  jsonp('getRoster', {}, function(d){
+  api('getRoster', {}, function(d){
     if (d.success && d.players) {
       V.players = {};
       d.players.forEach(function(p){ V.players[String(p.Player_ID)] = p; });
@@ -191,7 +210,7 @@ function bootstrap(){
 
 function reloadGames(){
   setStatus('Loading games…');
-  jsonp('getGames', {}, function(d){
+  api('getGames', {}, function(d){
     if (d.success && d.games) {
       V.games = d.games;
       var sel = $('gamePick');
@@ -213,7 +232,7 @@ function onGameChange(){
   V.gameRec = null;
   for (var i=0;i<V.games.length;i++) if (V.games[i].Game_ID === gid) { V.gameRec = V.games[i]; break; }
   setStatus('Loading events…');
-  jsonp('getEvents', { gameId: gid }, function(d){
+  api('getEvents', { gameId: gid }, function(d){
     if (d.success && d.events) { V.events = d.events; renderAll(); setStatus(''); }
     else { setStatus('No events returned for this game.'); }
   }, function(){ setStatus('Failed to load events.'); });
@@ -349,7 +368,7 @@ function renderRoster(){
     var rows=groups[g]; if(!rows.length) return; rows.sort(byJ);
     html += '<tr class="pos-head"><td colspan="8">'+(g==='Other'?'OTHER':g.toUpperCase())+'</td></tr>';
     rows.forEach(function(r){
-      html += '<tr><td><b>'+r.jersey+'</b></td><td class="l">'+r.name+'</td>'+
+      html += '<tr><td><b>'+esc(r.jersey)+'</b></td><td class="l">'+esc(r.name)+'</td>'+
         '<td>'+r.s.shots+'</td><td>'+r.s.sog+'</td><td>'+r.s.goals+'</td>'+
         '<td>'+r.s.assists+'</td><td>'+r.s.gbs+'</td><td>'+(r.s.saves||'')+'</td></tr>';
     });
@@ -374,7 +393,7 @@ function renderScoring(){
   rows.sort(function(a,b){ return b.p-a.p || b.g-a.g; });
   var html='<table><thead><tr><th>#</th><th class="l">Name</th><th>G</th><th>A</th><th>PTS</th></tr></thead><tbody>';
   if(!rows.length) html+='<tr><td colspan="5" class="empty">No scoring recorded</td></tr>';
-  rows.forEach(function(r){ html+='<tr><td><b>'+r.j+'</b></td><td class="l">'+r.n+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td><b>'+r.p+'</b></td></tr>'; });
+  rows.forEach(function(r){ html+='<tr><td><b>'+esc(r.j)+'</b></td><td class="l">'+esc(r.n)+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td><b>'+r.p+'</b></td></tr>'; });
   html+='</tbody></table>'; $('scoringTable').innerHTML=html;
 }
 
@@ -404,10 +423,10 @@ function renderSummary(){
 function renderMeta(){
   var g=V.gameRec||{};
   $('gameMeta').innerHTML =
-    '<div>Date: '+(g.Date||'')+'</div>'+
-    '<div>Opponent: '+(g.Opponent||'')+'</div>'+
-    '<div>Site: '+(g.Location||'')+'</div>'+
-    '<div class="big">'+(g.Score||'')+'</div>';
+    '<div>Date: '+esc(g.Date)+'</div>'+
+    '<div>Opponent: '+esc(g.Opponent)+'</div>'+
+    '<div>Site: '+esc(g.Location)+'</div>'+
+    '<div class="big">'+esc(g.Score)+'</div>';
 }
 
 function renderAll(){
@@ -423,7 +442,7 @@ function showToast(){} // no-op (viewer has inline status)
 
 // ---------- Init ----------
 (function init(){
-  V.url = localStorage.getItem(URL_KEY) || '';
+  V.url = localStorage.getItem(URL_KEY) || (/^https?:\/\//.test(DEFAULT_SCRIPT_URL) ? DEFAULT_SCRIPT_URL : '');
   ['goal','sog','shot'].forEach(function(t){
     var b=document.querySelector('.hm-tog[data-type="'+t+'"]'); if(b) b.classList.remove('off');
   });

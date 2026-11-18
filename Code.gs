@@ -17,30 +17,40 @@ var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
  * confirmed (JSON) saves. Bump it when the app<->script protocol changes.
  *   1 = original (form post, unconfirmed)
  *   2 = JSON replies, re-sync replaces the game, Game Log written by the script
+ *   3 = every data read needs the PIN too (sent in a POST body, never in a URL)
  */
-var SCRIPT_VERSION = 2;
+var SCRIPT_VERSION = 3;
 
 /**
- * Write PIN (Option 3 security).
- * The secret lives in Script Properties (File > Project Settings > Script Properties),
- * key WRITE_PIN, so it is NOT visible in the public app source. Change it there and the
- * new PIN takes effect immediately -- no redeploy needed.
+ * The scorekeeper PIN.
+ * The secret lives in Script Properties (Project Settings > Script Properties),
+ * key WRITE_PIN, so it is NOT in the public app code. Change it there and the
+ * new PIN works immediately -- no redeploy needed.
  *
- * If no WRITE_PIN property is set, writes are LEFT OPEN (fail-open) so the app is never
- * accidentally locked out before the property is configured. Set the property to turn
- * enforcement on. Reads (getRoster/getGames/getEvents) and the connection test are never
- * gated -- only the exportGame write is.
+ * The same PIN is needed to SAVE a game and to READ anything (roster,
+ * officials, games, play-by-play). Only the version check and the connection
+ * test answer without it; they reveal nothing.
+ *
+ * If WRITE_PIN is not set, everything is REFUSED (fail closed) with the error
+ * PIN_NOT_SET, so a missing setting can never leave the stats open.
  */
 function getWritePin_() {
   var p = PropertiesService.getScriptProperties().getProperty('WRITE_PIN');
   return (p === null || p === undefined) ? '' : String(p).trim();
 }
 
-function pinOk_(payload) {
+// Returns null when the PIN is right, otherwise the error reply to send back.
+function pinError_(payload) {
   var required = getWritePin_();
-  if (required === '') return true; // not configured yet -> fail open
+  if (required === '') {
+    return { success: false, error: 'PIN_NOT_SET',
+      message: 'The PIN has not been set up in the Apps Script (Project Settings > Script Properties > WRITE_PIN).' };
+  }
   var supplied = (payload && payload.pin !== undefined && payload.pin !== null) ? String(payload.pin).trim() : '';
-  return supplied === required;
+  if (supplied !== required) {
+    return { success: false, error: 'INVALID_PIN', message: 'Incorrect or missing PIN.' };
+  }
+  return null;
 }
 
 // ============================================================
@@ -51,17 +61,13 @@ function doGet(e) {
   var action = e.parameter.action || '';
   var callback = e.parameter.callback || '';
 
-  if (action === 'getRoster') {
-    return handleGetRoster(callback);
-  }
-  if (action === 'getOfficials') {
-    return handleGetOfficials(callback);
-  }
-  if (action === 'getGames') {
-    return handleGetGames(callback);
-  }
-  if (action === 'getEvents') {
-    return handleGetEvents(callback, e.parameter.gameId || '');
+  // Data used to be readable here by anyone with the link. It now needs the PIN,
+  // which must never travel in a URL, so these ask older apps to update.
+  if (action === 'getRoster' || action === 'getOfficials' || action === 'getGames' || action === 'getEvents') {
+    var msg = JSON.stringify({ success: false, error: 'UPDATE_APP',
+      message: 'This version of the app is out of date. Reload it to update.' });
+    return ContentService.createTextOutput(/^[A-Za-z0-9_.]+$/.test(callback) ? callback + '(' + msg + ')' : msg)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
   if (action === 'version') {
     return jsonResponse({ success: true, version: SCRIPT_VERSION });
@@ -105,17 +111,24 @@ function doPost(e) {
   return legacy ? buildResponse(result) : jsonResponse(result);
 }
 
+var PIN_ACTIONS = { exportGame: true, getRoster: true, getOfficials: true, getGames: true, getEvents: true };
+
 function routePost_(payload) {
   if (payload.test === true) {
     return { success: true, version: SCRIPT_VERSION, message: 'Connection successful! Scorebook is linked.' };
   }
-  if (payload.action === 'exportGame') {
-    if (!pinOk_(payload)) {
-      return { success: false, error: 'INVALID_PIN', message: 'Incorrect or missing PIN. Stats were not saved.' };
-    }
-    return handleExportGame(payload.gameData);
+  if (!PIN_ACTIONS[payload.action]) return { success: false, error: 'Unknown action' };
+
+  var bad = pinError_(payload);
+  if (bad) {
+    if (payload.action === 'exportGame') bad.message += ' Stats were not saved.';
+    return bad;
   }
-  return { success: false, error: 'Unknown action' };
+  if (payload.action === 'exportGame') return handleExportGame(payload.gameData);
+  if (payload.action === 'getRoster') return getRoster_();
+  if (payload.action === 'getOfficials') return getOfficials_();
+  if (payload.action === 'getGames') return getGames_();
+  if (payload.action === 'getEvents') return getEvents_(payload.gameId || '');
 }
 
 function jsonResponse(data) {
@@ -124,17 +137,12 @@ function jsonResponse(data) {
 }
 
 // ============================================================
-// ROSTER PULL (JSONP)
+// DATA READS (PIN required - see routePost_)
 // ============================================================
 
-function handleGetRoster(callback) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Players');
-  if (!sheet) {
-    return ContentService.createTextOutput(callback + '({"error":"Players tab not found"})')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-
+function getRoster_() {
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Players');
+  if (!sheet) return { success: false, error: 'Players tab not found' };
   var data = sheet.getDataRange().getValues();
   var players = [];
   for (var i = 1; i < data.length; i++) {
@@ -148,10 +156,7 @@ function handleGetRoster(callback) {
       isStarter: isStarterFlag_(row[4])
     });
   }
-
-  var json = JSON.stringify({ success: true, players: players });
-  return ContentService.createTextOutput(callback + '(' + json + ')')
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  return { success: true, players: players };
 }
 
 // Starter column (E, header "isStarter"): a real checkbox (TRUE) or any of
@@ -163,40 +168,22 @@ function isStarterFlag_(v) {
   return s === 'x' || s === 'y' || s === 'yes' || s === 'true' || s === '1';
 }
 
-// ============================================================
-// OFFICIALS PULL (JSONP) - top-level function
-// ============================================================
-
-function handleGetOfficials(callback) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Officials');
-  if (!sheet) {
-    return ContentService.createTextOutput(callback + '({"success":false,"error":"Officials tab not found"})')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+function getOfficials_() {
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Officials');
+  if (!sheet) return { success: false, error: 'Officials tab not found' };
   var data = sheet.getDataRange().getValues();
   var officials = [];
   for (var i = 1; i < data.length; i++) {
     if (!data[i][0] && !data[i][1]) continue;
     officials.push({ Role: String(data[i][0]), Name: String(data[i][1]) });
   }
-  var json = JSON.stringify({ success: true, officials: officials });
-  return ContentService.createTextOutput(callback + '(' + json + ')')
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  return { success: true, officials: officials };
 }
 
-// ============================================================
-// READ ENDPOINTS FOR THE READ-ONLY VIEWER APP
-// ============================================================
-
-// Returns the list of games (newest first) so the viewer can populate a picker.
-function handleGetGames(callback) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Games');
-  if (!sheet) {
-    return ContentService.createTextOutput(callback + '({"success":false,"error":"Games tab not found"})')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+// The list of games (newest first) for the viewer's picker.
+function getGames_() {
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Games');
+  if (!sheet) return { success: false, error: 'Games tab not found' };
   var data = sheet.getDataRange().getValues();
   var games = [];
   // Columns: 0 Game_ID,1 Date,2 Opponent,3 Location,4 Score,5 Game_Label, 6-14 meta.
@@ -218,19 +205,13 @@ function handleGetGames(callback) {
     });
   }
   games.reverse(); // newest first
-  var json = JSON.stringify({ success: true, games: games });
-  return ContentService.createTextOutput(callback + '(' + json + ')')
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  return { success: true, games: games };
 }
 
-// Returns all Event rows for one Game_ID (or all events if gameId is blank).
-function handleGetEvents(callback, gameId) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Events');
-  if (!sheet) {
-    return ContentService.createTextOutput(callback + '({"success":false,"error":"Events tab not found"})')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+// All Event rows for one Game_ID (or every event if gameId is blank).
+function getEvents_(gameId) {
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Events');
+  if (!sheet) return { success: false, error: 'Events tab not found' };
   var data = sheet.getDataRange().getValues();
   var tz = Session.getScriptTimeZone();
   function clock(v) {
@@ -263,9 +244,7 @@ function handleGetEvents(callback, gameId) {
       Zone_ID: String(data[i][11] || '')
     });
   }
-  var json = JSON.stringify({ success: true, events: events });
-  return ContentService.createTextOutput(callback + '(' + json + ')')
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  return { success: true, events: events };
 }
 
 // ============================================================
@@ -546,12 +525,12 @@ function buildResponse(data) {
   var jsonString = JSON.stringify(data);
   var html = '<!DOCTYPE html><html><head><title>Response</title></head><body>'
     + '<script>'
-    + 'var data = ' + jsonString + ';'
+    + 'var data = ' + jsonString.replace(/</g, '\\u003c') + ';'
     + 'if (window.parent && window.parent !== window) {'
     + '  window.parent.postMessage({type: "scorebook_response", data: data}, "*");'
     + '}'
     + '</script>'
-    + '<p>' + (data.success ? 'Success' : 'Error: ' + (data.error || 'Unknown')) + '</p>'
+    + '<p>' + (data.success ? 'Success' : 'Error: ' + String(data.error || 'Unknown').replace(/</g, '&lt;')) + '</p>'
     + '</body></html>';
   return HtmlService.createHtmlOutput(html);
 }
@@ -743,7 +722,13 @@ function generateScoresheetPDF() {
   scorers.sort(function(a,b){ return b.pts - a.pts || b.g - a.g; });
 
   // ---------- HTML builders ----------
-  function esc(x){ return (x===null||x===undefined)?'':String(x); }
+  // Escape text before it goes into the scoresheet HTML, so a name like
+  // O'Brien or one containing < or & always displays as typed.
+  function esc(x){
+    if (x === null || x === undefined) return '';
+    return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
 
   // Roster block (one position band = header row + player rows).
   function rosterBlock() {
@@ -882,7 +867,7 @@ function generateScoresheetPDF() {
     + '<div class="title-bar">FISHERS TIGERS LACROSSE &mdash; OFFICIAL GAME SCORESHEET</div>'
     + '<div class="us">US</div>'
     + '<div class="meta">'
-    +   '<div>Date: ' + gameDate + '</div><div>Opponent: ' + esc(opponent) + '</div>'
+    +   '<div>Date: ' + esc(gameDate) + '</div><div>Opponent: ' + esc(opponent) + '</div>'
     +   '<div>Site: ' + esc(location) + '</div><div>Start: ' + esc(gameStart) + '</div>'
     +   '<div>Weather: ' + esc(weather) + '</div>'
     +   '<div style="margin-left:auto;">Final: <b>' + tigersGoals + ' - ' + oppGoals + '</b></div>'
@@ -934,7 +919,7 @@ function generateScoresheetPDF() {
     + '</div>'
 
     + '<div class="footer">'
-    +   '<div>Date: ' + gameDate + '</div><div>Site: ' + esc(location) + '</div>'
+    +   '<div>Date: ' + esc(gameDate) + '</div><div>Site: ' + esc(location) + '</div>'
     +   '<div>Weather: ' + esc(weather) + '</div><div>Game Start: ' + esc(gameStart) + '</div>'
     +   '<div>Scorer: ' + esc(scorer) + '</div><div>Timer: ' + esc(timer) + '</div>'
     + '</div>'
