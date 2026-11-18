@@ -22,8 +22,9 @@ var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
  *   4 = Season Totals written by the script; permanent player IDs (P001...)
  *   5 = MaxPreps Export tab written by the script (season to date)
  *   6 = family sign-in for the stats viewer (email code, own player only)
+ *   7 = view-only coach PINs (VIEW_PINS) + lockout after too many wrong PINs
  */
-var SCRIPT_VERSION = 6;
+var SCRIPT_VERSION = 7;
 
 /**
  * The scorekeeper PIN.
@@ -43,18 +44,71 @@ function getWritePin_() {
   return (p === null || p === undefined) ? '' : String(p).trim();
 }
 
-// Returns null when the PIN is right, otherwise the error reply to send back.
-function pinError_(payload) {
+/**
+ * View-only coach PINs.
+ * Script Properties key VIEW_PINS: one or more PINs separated by commas, e.g.
+ * "4821, 7735" (one per coach, so one can be removed without touching the
+ * others). A coach PIN can READ everything (the viewer's coach view, pulling
+ * the roster) but can never SAVE a game. Leave it out if you don't use it.
+ */
+function getViewPins_() {
+  var p = PropertiesService.getScriptProperties().getProperty('VIEW_PINS');
+  return String(p === null || p === undefined ? '' : p).split(/[,\s]+/)
+    .map(function(x) { return x.trim(); }).filter(function(x) { return x !== ''; });
+}
+
+/**
+ * PIN lockout: after PIN_MAX_FAILS wrong PINs in a row (within 15 minutes),
+ * every PIN - right or wrong - is refused for PIN_LOCK_MINUTES. That stops
+ * anyone guessing PINs by trying thousands of them. A right PIN resets the
+ * count. Lacrosse Tools > Clear PIN lockout ends a lockout early.
+ * (Family email sign-in has its own limits and is not affected.)
+ */
+var PIN_MAX_FAILS = 10;
+var PIN_LOCK_MINUTES = 15;
+
+// Returns null when the PIN is right (and allowed for this action),
+// otherwise the error reply to send back. needWrite: saving a game.
+function pinError_(payload, needWrite) {
   var required = getWritePin_();
   if (required === '') {
     return { success: false, error: 'PIN_NOT_SET',
       message: 'The PIN has not been set up in the Apps Script (Project Settings > Script Properties > WRITE_PIN).' };
   }
+  var cache = CacheService.getScriptCache();
+  if (cache.get('PIN_LOCK')) {
+    return { success: false, error: 'PIN_LOCKED',
+      message: 'Too many wrong PINs, so PIN entry is paused for up to ' + PIN_LOCK_MINUTES +
+        ' minutes. Try again later (a game stays saved on the device until then).' };
+  }
   var supplied = (payload && payload.pin !== undefined && payload.pin !== null) ? String(payload.pin).trim() : '';
-  if (supplied !== required) {
+  var role = '';
+  if (supplied !== '' && supplied === required) role = 'write';
+  else if (supplied !== '' && getViewPins_().indexOf(supplied) >= 0) role = 'view';
+  if (!role) {
+    var fails = parseInt(cache.get('PIN_FAILS') || '0', 10) + 1;
+    if (fails >= PIN_MAX_FAILS) {
+      cache.put('PIN_LOCK', '1', PIN_LOCK_MINUTES * 60);
+      cache.remove('PIN_FAILS');
+    } else {
+      cache.put('PIN_FAILS', String(fails), 15 * 60);
+    }
     return { success: false, error: 'INVALID_PIN', message: 'Incorrect or missing PIN.' };
   }
+  cache.remove('PIN_FAILS');
+  if (needWrite && role !== 'write') {
+    return { success: false, error: 'INVALID_PIN',
+      message: 'That is a view-only coach PIN; it can\'t save games. Use the scorebook PIN.' };
+  }
   return null;
+}
+
+// Lacrosse Tools > Clear PIN lockout.
+function clearPinLockout() {
+  var cache = CacheService.getScriptCache();
+  cache.remove('PIN_LOCK');
+  cache.remove('PIN_FAILS');
+  SpreadsheetApp.getUi().alert('PIN lockout cleared. PINs work again now.');
 }
 
 // ============================================================
@@ -128,7 +182,7 @@ function routePost_(payload) {
   if (payload.action === 'signOut') return signOut_(payload);
   if (!PIN_ACTIONS[payload.action]) return { success: false, error: 'Unknown action' };
 
-  var bad = pinError_(payload);
+  var bad = pinError_(payload, payload.action === 'exportGame');
   if (bad) {
     if (payload.action === 'exportGame') bad.message += ' Stats were not saved.';
     return bad;
@@ -801,6 +855,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Check for new sign-ups (Viewers)', 'checkNewSignUps')
     .addItem('Set up family sign-in', 'setupFamilySignIn')
+    .addItem('Clear PIN lockout', 'clearPinLockout')
     .addToUi();
   // New sign-ups from the form show up in Viewers whenever the Sheet is opened.
   try {
