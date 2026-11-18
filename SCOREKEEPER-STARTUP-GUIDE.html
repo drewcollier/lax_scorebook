@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fishers Tigers Lacrosse Scorebook — Scorekeeper Startup Guide</title>
+<!-- Built from SCOREKEEPER-STARTUP-GUIDE.md by tools/build_docs.py: edit the .md, not this file. -->
 <style>
+/* Styles for SCOREKEEPER-STARTUP-GUIDE.html (used by tools/build_docs.py). */
   :root {
     --navy: #1a2744;
     --accent: #2f6f3e;
@@ -136,234 +138,344 @@
   .shot figcaption { font-size: 0.85em; color: #555; margin-top: 4px; }
   .shot-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; page-break-inside: avoid; }
   .shot-row .shot { flex: 1 1 0; margin: 8px 0; max-width: 240px; }
-  .shot-row .shot img { max-width: 100%; }</style>
+  .shot-row .shot img { max-width: 100%; }
+</style>
 </head>
 <body>
 
 <header>
   <h1>Fishers Tigers Lacrosse Scorebook</h1>
-  <div class="sub">Scorekeeper Startup Guide &nbsp;•&nbsp; Setup time: about 5 minutes</div>
+  <div class="sub">Scorekeeper Startup Guide &nbsp;•&nbsp; Setup time: about 5 minutes.</div>
 </header>
 
 <p>Welcome! This guide gets you set up to keep score. You only have to do the
-one-time setup <strong>once</strong> on your device. After that, you'll just open
-the app and start the game.</p>
-
+one-time setup <strong>once</strong> on your device. After that, you'll just open the app and
+start the game.</p>
 <h2>What you'll need before you start</h2>
 <ul>
-  <li>A phone, tablet, or laptop with internet.</li>
-  <li>The <strong>app web address</strong>: <a href="https://drewcollier.github.io/lax_scorebook/">https://drewcollier.github.io/lax_scorebook/</a></li>
-  <li>The <strong>Script Link</strong> — a long web address I will send you. This connects the app to our team's stats sheet.</li>
-  <li>The <strong>Stats PIN</strong> — a short number I will send you, needed to save a game.</li>
+<li>A phone, tablet, or laptop with internet.</li>
+<li>The <strong>app web address</strong>: <a href="https://drewcollier.github.io/lax_scorebook/">https://drewcollier.github.io/lax_scorebook/</a></li>
+<li>The <strong>Stats PIN</strong> (a short number I will send you — needed to load the roster
+  and to save a game). Keep it to yourself; don't write it on the tablet.</li>
 </ul>
-<div class="tip">Keep the Script Link and PIN handy. You'll paste them in during setup.</div>
-
+<div class="tip">
+<p>The app is already connected to our team's stats sheet. There's no link to paste.</p>
+</div>
 <h2>Part 1 — One-time setup (do this once per device)</h2>
-
 <h3>Step 1: Open the app</h3>
 <ol>
-  <li>Open your web browser (Chrome, Safari, Edge — whatever you normally use).</li>
-  <li>Go to <a href="https://drewcollier.github.io/lax_scorebook/"><strong>https://drewcollier.github.io/lax_scorebook/</strong></a></li>
-  <li>You should see the scorebook with four buttons across the top:
-      <span class="btn-ref">Game</span> <span class="btn-ref">Roster</span>
-      <span class="btn-ref">History</span> <span class="btn-ref">Settings</span></li>
+<li>Open your web browser (Chrome, Safari, Edge — whatever you normally use).</li>
+<li>Go to <strong>https://drewcollier.github.io/lax_scorebook/</strong></li>
+<li>You should see the scorebook with four buttons across the top:
+   <strong>Game</strong>, <strong>Roster</strong>, <strong>History</strong>, and <strong>Settings</strong>.</li>
 </ol>
-<div class="tip"><strong>Tip — add it to your home screen (optional but handy):</strong>
-  <ul>
-    <li><strong>iPhone/iPad:</strong> tap the Share button, then "Add to Home Screen."</li>
-    <li><strong>Android:</strong> tap the menu (three dots), then "Add to Home screen."</li>
-  </ul>
-  This gives you a tap-to-open icon so you don't have to type the address again.
+<div class="tip">
+<p><strong>Tip — add it to your home screen (optional but handy):</strong></p>
+<ul>
+<li><strong>iPhone/iPad:</strong> tap the Share button, then "Add to Home Screen."</li>
+<li><strong>Android:</strong> tap the menu (three dots), then "Add to Home screen."
+  This gives you a tap-to-open icon so you don't have to type the address again.</li>
+</ul>
 </div>
-
-<h3>Step 2: Connect the app to our stats sheet</h3>
+<h3>Step 2: Make sure the connection works</h3>
 <ol>
-  <li>Tap the <span class="btn-ref">Settings</span> button at the top.</li>
-  <li>Find the box labeled <strong>"Google Apps Script URL."</strong></li>
-  <li><strong>Paste the Script Link</strong> I sent you into that box.
-      (To paste: tap and hold inside the box, then choose <strong>Paste</strong>.)</li>
-  <li>Tap <span class="btn-ref">Save</span>.</li>
+<li>Tap the <strong>Settings</strong> button at the top.</li>
+<li>Leave the <strong>Google Apps Script URL</strong> box <strong>blank</strong> — the team's link is built in.</li>
+<li>Tap <strong>Test Connection</strong>. You should see <strong>"Connected! … Saves will be confirmed."</strong><ul>
+<li>✅ <strong>If it says connected</strong> — you're good, go to Step 3.</li>
+<li>❌ <strong>If it shows an error</strong> — check you have internet and try again. If it
+ still fails, contact me.</li>
+</ul>
+</li>
 </ol>
-<figure class="shot "><img src="guide-images/settings.png" alt="Settings: paste the Script Link, then tap Save"><figcaption>Settings: paste the Script Link, then tap Save</figcaption></figure>
-
-<h3>Step 3: Make sure the connection works</h3>
+<figure class="shot "><img src="guide-images/settings.png" alt="Settings: leave the link box blank, tap Test Connection"><figcaption>Settings: leave the link box blank, tap Test Connection</figcaption></figure>
+<h3>Step 3: Load the team roster</h3>
 <ol>
-  <li>Still on the <strong>Settings</strong> screen, tap <span class="btn-ref">Test Connection</span>.</li>
-  <li>You should see a small message confirming it connected.
-    <ul>
-      <li>✅ <strong>If it says connected</strong> — you're good, go to Step 4.</li>
-      <li>❌ <strong>If it shows an error</strong> — double-check you pasted the
-          <strong>entire</strong> Script Link (they're long and easy to cut off).
-          Re-paste it, tap <strong>Save</strong>, and try <strong>Test Connection</strong>
-          again. If it still fails, contact me.</li>
-    </ul>
-  </li>
+<li>Tap the <strong>Roster</strong> button at the top.</li>
+<li>Tap <strong>Pull Roster from Sheets</strong> and type the <strong>Stats PIN</strong> when asked. The
+   player list fills in automatically.</li>
+<li>Tap <strong>Pull Officials from Sheets</strong> and type the PIN again (this loads the
+   referee/officials names you'll pick from before a game).</li>
 </ol>
-
-<h3>Step 4: Load the team roster</h3>
-<ol>
-  <li>Tap the <span class="btn-ref">Roster</span> button at the top.</li>
-  <li>Tap <span class="btn-ref">Pull Roster from Sheets</span>. The player list fills in automatically.</li>
-  <li>Tap <span class="btn-ref">Pull Officials from Sheets</span> (this loads the referee/officials names you'll pick from before a game).</li>
-</ol>
+<div class="tip">
+<p>The app asks for the PIN <strong>every time</strong> and never stores it, so it's safe to hand
+the tablet to someone else.</p>
+</div>
 <figure class="shot "><img src="guide-images/roster.png" alt="Roster: tap Pull Roster from Sheets"><figcaption>Roster: tap Pull Roster from Sheets</figcaption></figure>
-<div class="note">That's it — setup is done. You won't need to repeat Part 1 on this device.</div>
-
+<p>That's it — setup is done. You won't need to repeat this on this device.</p>
 <h2>Part 2 — Getting ready for a game</h2>
 <p>Do this shortly before game time.</p>
-
 <h3>Step 1: Open the app and check the roster</h3>
 <ol>
-  <li>Open the app (tap your home-screen icon, or go to the web address).</li>
-  <li>Tap <span class="btn-ref">Roster</span> and confirm the players are listed.
-      If the list looks empty or out of date, tap <strong>Pull Roster from Sheets</strong> again to refresh it.</li>
+<li>Open the app (tap your home-screen icon, or go to the web address).</li>
+<li>Tap <strong>Roster</strong> and confirm the players are listed.<ul>
+<li>If the list looks empty or out of date, tap <strong>Pull Roster from Sheets</strong>
+ again to refresh it.</li>
+</ul>
+</li>
 </ol>
-
 <h3>Step 2: Set up the game</h3>
 <ol>
-  <li>Tap the <span class="btn-ref">Game</span> button at the top.</li>
-  <li>Fill in the game details:
-    <ul>
-      <li><strong>Opponent name</strong></li>
-      <li><strong>Date</strong> (it usually defaults to today)</li>
-      <li><strong>Location</strong> (Home or Away)</li>
-    </ul>
-  </li>
-  <li>Tap <span class="btn-ref">Start Game</span>.</li>
-  <li>A short pop-up appears to capture game details (weather, officials, start time, etc.).
-      Fill in what you know and tap <strong>Start Game</strong> again to begin.
-      Anything you're unsure of can be left as-is.</li>
+<li>Tap the <strong>Game</strong> button at the top.</li>
+<li>Fill in the game details:<ul>
+<li><strong>Opponent name</strong></li>
+<li><strong>Date</strong> (it usually defaults to today)</li>
+<li><strong>Location</strong> (Home or Away)</li>
+</ul>
+</li>
+<li>Tap <strong>Start Game</strong>.</li>
+<li>A short pop-up appears to capture game details (weather, officials, start
+   time, etc.). Fill in what you know and tap <strong>Start Game</strong> again to begin.<ul>
+<li>Anything you're unsure of can be left as-is.</li>
+</ul>
+</li>
 </ol>
 <figure class="shot "><img src="guide-images/setup.png" alt="Game tab before the game: enter the opponent, then Start Game"><figcaption>Game tab before the game: enter the opponent, then Start Game</figcaption></figure>
-<div class="note">You're now ready to score the game. 🥍</div>
-
+<p>You're now ready to score the game. 🥍</p>
 <h2>Part 3 — Scoring the game</h2>
 <p>The app works the way stats are called out: <strong>Stat, Player, Time (only if needed)</strong>.
-For example: "Ground ball, number 3." Or: "Goal, number 27, assisted by number 9, time 11:15."</p>
-<p>On the <span class="btn-ref">Game</span> tab, make sure <span class="btn-ref">By Stat</span> is selected at the top of the screen.</p>
+For example: "Ground ball, number 3." Or: "Goal, number 27, assisted by number 9,
+time 11:15."</p>
+<p>On the <strong>Game</strong> tab, make sure <strong>By Stat</strong> is selected at the top of the screen.</p>
 <figure class="shot tall"><img src="guide-images/bystat.png" alt="Game tab with By Stat selected"><figcaption>Game tab with By Stat selected</figcaption></figure>
-
 <h3>Recording a stat</h3>
 <ol>
-  <li>Tap the stat (for example <span class="btn-ref">Ground Ball</span>).</li>
-  <li>Tap the jersey number on the keypad (one or two digits), then tap <span class="btn-ref">OK</span>.</li>
+<li>Tap the stat (for example <strong>Ground Ball</strong>).</li>
+<li>Tap the jersey number on the keypad (one or two digits), then tap <strong>OK</strong>.</li>
 </ol>
 <figure class="shot "><img src="guide-images/keypad.png" alt="Ground Ball: key in #3, then OK"><figcaption>Ground Ball: key in #3, then OK</figcaption></figure>
 <p>That's it. The stat shows up in the Event Log at the bottom of the screen.</p>
 <table>
-  <tr><th>Stat</th><th>What happens after you enter the jersey</th></tr>
-  <tr><td>Ground Ball, Turnover, Caused Turnover, Interception</td><td>Recorded right away</td></tr>
-  <tr><td>Face Off Won, Face Off Lost</td><td>Recorded right away</td></tr>
-  <tr><td>Save</td><td>Recorded right away (goalies only)</td></tr>
-  <tr><td>Goal Allowed</td><td>Asks for the time on the clock (goalies only)</td></tr>
-  <tr><td>Shot</td><td>Asks where the shot was taken from</td></tr>
-  <tr><td>Shot on Goal</td><td>Counts a shot too. Asks where the shot was taken from</td></tr>
+<thead>
+<tr>
+<th>Stat</th>
+<th>What happens after you enter the jersey</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ground Ball, Turnover, Caused Turnover, Interception</td>
+<td>Recorded right away</td>
+</tr>
+<tr>
+<td>Face Off Won, Face Off Lost</td>
+<td>Recorded right away</td>
+</tr>
+<tr>
+<td>Save</td>
+<td>Recorded right away (goalies only)</td>
+</tr>
+<tr>
+<td>Goal Allowed</td>
+<td>Asks for the time on the clock (goalies only)</td>
+</tr>
+<tr>
+<td>Shot</td>
+<td>Asks where the shot was taken from</td>
+</tr>
+<tr>
+<td>Shot on Goal</td>
+<td>Counts a shot too. Asks where the shot was taken from</td>
+</tr>
+</tbody>
 </table>
-<div class="tip"><strong>Shot location is the least important detail.</strong> If you missed it, tap <strong>Skip</strong>.</div>
-
+<div class="tip">
+<p><strong>Shot location is the least important detail.</strong> If you missed it, tap <strong>Skip</strong>.</p>
+</div>
 <h3>Recording a goal</h3>
 <p>Enter it in the same order it is called out:</p>
 <ol>
-  <li>Tap <span class="btn-ref">Goal</span>.</li>
-  <li>Enter the <strong>scorer's</strong> jersey number, tap <span class="btn-ref">OK</span>.</li>
-  <li>Enter the <strong>assist</strong> jersey number and tap <span class="btn-ref">OK</span>, or tap <span class="btn-ref">No Assist</span>.</li>
-  <li>Enter the <strong>time on the clock</strong> as four digits (for example <strong>0934</strong> for 9:34), tap <span class="btn-ref">OK</span>. The time is required for every goal.</li>
-  <li>Tap the <strong>shot location</strong>, or tap <span class="btn-ref">Skip</span>.</li>
+<li>Tap <strong>Goal</strong>.</li>
+<li>Enter the <strong>scorer's</strong> jersey number, tap <strong>OK</strong>.</li>
+<li>Enter the <strong>assist</strong> jersey number and tap <strong>OK</strong>, or tap <strong>No Assist</strong>.</li>
+<li>Enter the <strong>time on the clock</strong> as four digits (for example <strong>0934</strong> for 9:34), tap <strong>OK</strong>.
+   The time is required for every goal.</li>
+<li>Tap the <strong>shot location</strong>, or tap <strong>Skip</strong>.</li>
 </ol>
-<div class="shot-row">
-<figure class="shot "><img src="guide-images/goal-assist.png" alt="Step 3: the assist, or No Assist"><figcaption>Step 3: the assist, or No Assist</figcaption></figure>
-<figure class="shot "><img src="guide-images/goal-clock.png" alt="Step 4: the time on the clock"><figcaption>Step 4: the time on the clock</figcaption></figure>
-<figure class="shot "><img src="guide-images/zone.png" alt="Step 5: the shot location, or Skip"><figcaption>Step 5: the shot location, or Skip</figcaption></figure>
-</div>
+<div class="shot-row"><figure class="shot "><img src="guide-images/goal-assist.png" alt="Step 3: the assist, or No Assist"><figcaption>Step 3: the assist, or No Assist</figcaption></figure><figure class="shot "><img src="guide-images/goal-clock.png" alt="Step 4: the time on the clock"><figcaption>Step 4: the time on the clock</figcaption></figure><figure class="shot "><img src="guide-images/zone.png" alt="Step 5: the shot location, or Skip"><figcaption>Step 5: the shot location, or Skip</figcaption></figure></div>
 <p>The goal also counts as a shot and a shot on goal automatically. Do not enter those
 separately. Nothing is saved until the last step, so if you tap <strong>Cancel</strong> before
 then, no goal is recorded.</p>
-
 <h3>If the app says a jersey number doesn't exist</h3>
-<p>The message "Jersey # doesn't exist on the roster" means that number is not on your roster.
-Tap <span class="btn-ref">Re-enter</span> to try again, or <span class="btn-ref">Cancel</span>.
-If the number is right, the roster may be out of date. Pull it again (see Part 2).</p>
+<p>The message "Jersey # doesn't exist on the roster" means that number is not on
+your roster. Tap <strong>Re-enter</strong> to try again, or <strong>Cancel</strong>. If the number is right,
+the roster may be out of date. Pull it again (see Part 2).</p>
 <figure class="shot "><img src="guide-images/error.png" alt="A jersey number that is not on the roster"><figcaption>A jersey number that is not on the roster</figcaption></figure>
-
 <h3>Penalties</h3>
 <p>Penalties work in the same order as everything else.</p>
 <ol>
-  <li>Tap <span class="btn-ref">PENALTY</span> and pick the team (and the player for the Tigers).</li>
-  <li>Enter the <strong>time on the clock</strong> when the penalty was called (four digits, for example <strong>0845</strong>). Take care with this one. The app uses it to work out how much of the penalty has been served.</li>
-  <li>Pick the penalty, then the <strong>duration</strong>.</li>
-  <li>For a <strong>personal foul</strong>, a <span class="btn-ref">Locked in</span> box appears. Tick it when the penalty is non-releasable, which means a goal will <strong>not</strong> release it. Technical fouls can never be locked.</li>
+<li>Tap <strong>PENALTY</strong> and pick the team (and the player for the Tigers).</li>
+<li>Enter the <strong>time on the clock</strong> when the penalty was called (four digits, for
+   example <strong>0845</strong>). Take care with this one. The app uses it to work out how
+   much of the penalty has been served.</li>
+<li>Pick the penalty, then the <strong>duration</strong>.</li>
+<li>For a <strong>personal foul</strong>, a <strong>Locked in</strong> box appears. Tick it when the penalty
+   is non-releasable, which means a goal will <strong>not</strong> release it. Technical fouls
+   can never be locked.</li>
 </ol>
-<p>Every active penalty appears in the <strong>Active penalties</strong> box, under the quarter buttons.</p>
-<figure class="shot"><img src="guide-images/penalties.png" alt="The Active penalties box with Served buttons"><figcaption>The Active penalties box</figcaption></figure>
+<p>Every active penalty appears in the <strong>Active penalties</strong> box, under the quarter
+buttons.</p>
+<figure class="shot "><img src="guide-images/penalties.png" alt="The Active penalties box with Served buttons"><figcaption>The Active penalties box with Served buttons</figcaption></figure>
 <ul>
-  <li><strong>EVEN, MAN-UP and MAN-DOWN are indicators, not buttons.</strong> The app works them out from the penalties in the box, so you never tap them. If both teams have a penalty it shows <strong>EVEN (1 v 1)</strong>. Two penalties against one team shows <strong>MAN-DOWN (2)</strong>.</li>
-  <li><strong>When a penalty ends, tap <span class="btn-ref">Served</span></strong> next to it. The app does not run a clock, so it relies on you for this. <span class="btn-ref">Clear all</span> removes every penalty and asks you to confirm first.</li>
-  <li><strong>Penalties called at the same time against both teams</strong> show "overlap locked". The shared time cannot be released by a goal.</li>
+<li><strong>EVEN, MAN-UP and MAN-DOWN are indicators, not buttons.</strong> The app works them
+  out from the penalties in the box, so you never tap them. If both teams have a
+  penalty it shows <strong>EVEN (1 v 1)</strong>. Two penalties against one team shows
+  <strong>MAN-DOWN (2)</strong>.</li>
+<li><strong>When a penalty ends, tap Served</strong> next to it. The app does not run a clock, so
+  it relies on you for this. <strong>Clear all</strong> removes every penalty and asks you to
+  confirm first.</li>
+<li><strong>Penalties called at the same time against both teams</strong> show "overlap locked".
+  The shared time cannot be released by a goal.</li>
 </ul>
-
 <h3>What a goal does to penalties</h3>
 <p>After you enter the goal's time, the app compares it with when each penalty started.</p>
 <ul>
-  <li>Penalties on the team that was <strong>scored on</strong> are released, unless they are locked or still inside their overlap time.</li>
-  <li>The team that <strong>scored</strong> keeps its own penalties.</li>
-  <li>If a penalty had already run out (you forgot to tap Served), a <strong>"Penalty already expired"</strong> message appears. Tap <span class="btn-ref">OK</span>. That goal is not counted as a man-up or man-down goal, and the strength goes back to what is really left.</li>
-  <li><strong>Undo</strong> on the goal puts back every penalty it released or cleared.</li>
-  <li>If you tap <strong>Cancel (leave blank)</strong> on the goal time, nothing is released.</li>
+<li>Penalties on the team that was <strong>scored on</strong> are released, unless they are locked
+  or still inside their overlap time.</li>
+<li>The team that <strong>scored</strong> keeps its own penalties.</li>
+<li>If a penalty had already run out (you forgot to tap Served), a <strong>"Penalty already
+  expired"</strong> message appears. Tap <strong>OK</strong>. That goal is not counted as a man-up or
+  man-down goal, and the strength goes back to what is really left.</li>
+<li><strong>Undo</strong> on the goal puts back every penalty it released or cleared.</li>
+<li>If you tap <strong>Cancel (leave blank)</strong> on the goal time, nothing is released.</li>
 </ul>
-
 <h3>Other options</h3>
 <ul>
-  <li><strong>Jersey Grid:</strong> if you would rather tap a player than type a number, tap
-  <span class="btn-ref">Jersey Grid</span> at the top of the jersey screen. The app remembers your choice
-  on this device. Tap <span class="btn-ref">Keypad</span> to switch back.</li>
-  <li><strong>By Player:</strong> tap <span class="btn-ref">By Player</span> at the top of the Game tab to see
-  player cards. Tap a player first, then the stat.</li>
-  <li><strong>Ejections:</strong> use the <strong>EJECTION</strong> button, same as always.</li>
-  <li><strong>Fixing a mistake:</strong> find the entry in the Event Log and tap <strong>Undo</strong>.</li>
+<li><strong>Jersey Grid:</strong> if you would rather tap a player than type a number, tap
+  <strong>Jersey Grid</strong> at the top of the jersey screen. The app remembers your choice
+  on this device. Tap <strong>Keypad</strong> to switch back.</li>
+<li><strong>By Player:</strong> tap <strong>By Player</strong> at the top of the Game tab to see player cards.
+  Tap a player first, then the stat.</li>
+<li><strong>Ejections:</strong> use the <strong>EJECTION</strong> button, same as always.</li>
+<li><strong>Fixing a mistake:</strong> find the entry in the Event Log and tap <strong>Undo</strong>. Undo
+  removes everything that one tap recorded: undoing a goal also removes its Shot
+  and Shot on Goal (and any man-up success it counted), undoing a Goal Allowed
+  or Save also removes the opponent's shot rows, and undoing a penalty also takes
+  back any ejection it caused.</li>
+<li><strong>If the app reloads or the screen locks mid-game:</strong> just reopen it. The
+  quarter, timeouts, penalties, and ejections are all kept.</li>
 </ul>
-<div class="shot-row">
-<figure class="shot "><img src="guide-images/grid.png" alt="Jersey Grid: tap the player"><figcaption>Jersey Grid: tap the player</figcaption></figure>
-<figure class="shot "><img src="guide-images/byplayer.png" alt="By Player view: player cards"><figcaption>By Player view: player cards</figcaption></figure>
-</div>
+<div class="shot-row"><figure class="shot "><img src="guide-images/grid.png" alt="Jersey Grid: tap the player"><figcaption>Jersey Grid: tap the player</figcaption></figure><figure class="shot "><img src="guide-images/byplayer.png" alt="By Player view: player cards"><figcaption>By Player view: player cards</figcaption></figure></div>
 <h2>Part 4 — Saving the game (the PIN)</h2>
-<p>When the game ends and you save it to the team sheet, the app will ask for the
-<strong>Stats PIN</strong> the first time on your device.</p>
-<ol>
-  <li>When prompted, type the <strong>Stats PIN</strong> I sent you.</li>
-  <li>The app remembers it on that device, so you won't be asked again.</li>
-</ol>
-<div class="meta-box"><strong>Why the PIN?</strong> It protects our official stats so only
-  our scorekeepers can save games. Viewing the app, loading the roster, and keeping score
-  never need the PIN — only <strong>saving</strong> a finished game does.</div>
-<p>If you ever mistype it or need to change it: go to
-  <span class="btn-ref">Settings</span> → <strong>Stats PIN</strong> →
-  <strong>Change / Clear Saved PIN</strong>.</p>
-
+<p>When you tap <strong>END GAME</strong>, the app asks for the <strong>Stats PIN</strong> to save the game to
+the team sheet.</p>
+<ul>
+<li><strong>Know the PIN?</strong> Type it and tap OK.</li>
+<li><strong>Coach saves it instead?</strong> Tap <strong>Cancel</strong>. The game stays safely in <strong>History</strong>.
+  Hand the tablet to the coach, who opens <strong>History</strong>, taps <strong>Press to sync</strong>, and
+  types the PIN.</li>
+</ul>
+<div class="tip">
+<p><strong>Why the PIN?</strong> It protects our official stats and the players' names. Loading
+the roster/officials and saving a game need it; keeping score never does.
+The app asks for it every time and does not store it.</p>
+</div>
+<p><strong>Coach's own phone:</strong> in <strong>Settings → Stats PIN</strong> you can tick <strong>Remember the PIN
+on this device</strong> so it's only asked once. Don't tick it on a shared tablet.</p>
+<h3>How you know it saved</h3>
+<ul>
+<li>When you tap <strong>END GAME</strong>, the app sends the game to the team sheet and waits
+  for Google to confirm. You'll see <strong>Saved "…" to the workbook ✓</strong> and the game
+  shows <strong>Synced ✓</strong> on the <strong>History</strong> screen.</li>
+<li><strong>No signal at the field?</strong> That's fine. The game stays on your device and the
+  History screen shows <strong>Press to sync</strong> (<em>"No connection - tap Press to sync when
+  back online"</em>). Once you have signal, tap <strong>Press to sync</strong> and enter the PIN. (On a device with <strong>Remember the PIN</strong> ticked, it sends
+  itself as soon as you're back online.)</li>
+<li>Sending a game again is always safe: it replaces that game in the sheet, it
+  never adds it twice.</li>
+</ul>
+<h3>After the game: scoresheet and MaxPreps file</h3>
+<p>Open <strong>History</strong>. Each game has two buttons (no PIN or signal needed):</p>
+<figure class="shot "><img src="guide-images/history.png" alt="History: sync status, Scoresheet and MaxPreps file for each game"><figcaption>History: sync status, Scoresheet and MaxPreps file for each game</figcaption></figure>
+<ul>
+<li><strong>Scoresheet</strong> — the official one-page scoresheet. Tap <strong>Print / Save PDF</strong>:
+  print it, or pick <strong>Save as PDF</strong> as the printer to keep or email a copy.
+  Tap <strong>Close</strong> to go back.</li>
+<li><strong>MaxPreps file</strong> — downloads a spreadsheet (CSV) with that game's player stats
+  in exactly MaxPreps' column order, ready for the coach to enter on MaxPreps.
+  Goalie minutes and W/L/T are filled in when one goalie played the whole game;
+  if two goalies played, those boxes are left blank for the coach.</li>
+</ul>
+<div class="tip">
+<p>History keeps the last few games on the device. For the whole season, the
+team sheet's <strong>MaxPreps Export</strong> tab has season-to-date totals in the same columns.</p>
+</div>
 <h2>Quick troubleshooting</h2>
 <table>
-  <tr><th>What you see</th><th>What to do</th></tr>
-  <tr><td>"Set Apps Script URL in Settings first"</td><td>You skipped Part 1, Step 2. Go to <strong>Settings</strong>, paste the Script Link, tap <strong>Save</strong>.</td></tr>
-  <tr><td>Roster is empty</td><td>Tap <strong>Roster</strong> → <strong>Pull Roster from Sheets</strong>.</td></tr>
-  <tr><td><strong>Test Connection</strong> fails</td><td>Re-paste the <strong>full</strong> Script Link (they get cut off easily), tap <strong>Save</strong>, try again.</td></tr>
-  <tr><td>App looks like an old version</td><td>Fully close the browser and reopen it.</td></tr>
-  <tr><td>"Jersey # doesn't exist on the roster"</td><td>That number is not on the roster. Tap <strong>Re-enter</strong>, or pull the roster again if it is out of date.</td></tr>
-  <tr><td>EVEN / MAN-UP / MAN-DOWN won't respond when tapped</td><td>They are indicators. Add or remove penalties in the <strong>Active penalties</strong> box and they update on their own.</td></tr>
-  <tr><td>"Penalty already expired" message after a goal</td><td>A penalty had run out before the goal. Tap <strong>OK</strong>. Next time, tap <strong>Served</strong> when a penalty ends.</td></tr>
-  <tr><td>Game won't save / asks for PIN</td><td>Type the <strong>Stats PIN</strong> I sent you. If rejected, use <strong>Settings → Stats PIN → Change / Clear Saved PIN</strong> and re-enter it.</td></tr>
+<thead>
+<tr>
+<th>What you see</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"No Apps Script link is set up"</td>
+<td>Go to <strong>Settings</strong>, make sure the <strong>Google Apps Script URL</strong> box is <strong>blank</strong>, tap <strong>Save</strong>.</td>
+</tr>
+<tr>
+<td>Roster is empty</td>
+<td>Tap <strong>Roster</strong> → <strong>Pull Roster from Sheets</strong>.</td>
+</tr>
+<tr>
+<td><strong>Test Connection</strong> fails</td>
+<td>Check your internet. Make sure the <strong>Google Apps Script URL</strong> box is blank (or holds the exact link you were given), tap <strong>Save</strong>, try again.</td>
+</tr>
+<tr>
+<td>A blue bar says <strong>"A new version of the scorebook is ready"</strong></td>
+<td>Tap <strong>Reload</strong> when convenient (your game is saved). If you ignore it, the new version loads the next time you open the app.</td>
+</tr>
+<tr>
+<td>App looks like an old version</td>
+<td>Close the app completely and open it again (it updates in the background, so the second open has the newest version).</td>
+</tr>
+<tr>
+<td>"Jersey # doesn't exist on the roster"</td>
+<td>That number is not on the roster. Tap <strong>Re-enter</strong>, or pull the roster again if it is out of date.</td>
+</tr>
+<tr>
+<td>EVEN / MAN-UP / MAN-DOWN won't respond when tapped</td>
+<td>They are indicators. Add or remove penalties in the <strong>Active penalties</strong> box and they update on their own.</td>
+</tr>
+<tr>
+<td>"Penalty already expired" message after a goal</td>
+<td>A penalty had run out before the goal. Tap <strong>OK</strong>. Next time, tap <strong>Served</strong> when a penalty ends.</td>
+</tr>
+<tr>
+<td>History says "No connection"</td>
+<td>Once you have signal, tap <strong>Press to sync</strong> and enter the PIN.</td>
+</tr>
+<tr>
+<td>History says "Wrong PIN - tap to try again"</td>
+<td>Tap <strong>Press to sync</strong> and type the correct <strong>Stats PIN</strong>.</td>
+</tr>
+<tr>
+<td><strong>Test Connection</strong> says the script is "an older version"</td>
+<td>Let me know — the team's Apps Script needs its update. Games still save, but can't be confirmed until then.</td>
+</tr>
+<tr>
+<td>"Incorrect PIN" / "Wrong PIN"</td>
+<td>Try again with the <strong>Stats PIN</strong> I sent you. If you're not sure of it, contact me.</td>
+</tr>
+<tr>
+<td>"The PIN has not been set up in the Apps Script"</td>
+<td>Contact me — this is a setting on my side.</td>
+</tr>
+<tr>
+<td>"The team's Apps Script is out of date"</td>
+<td>Contact me — the script needs its update.</td>
+</tr>
+</tbody>
 </table>
-
 <h2>Game-day checklist</h2>
 <ul class="checklist">
-  <li>App opens and shows the four tabs</li>
-  <li>Roster is loaded and current</li>
-  <li>Opponent, date, and location entered on the <strong>Game</strong> tab</li>
-  <li><strong>By Stat</strong> is selected on the Game tab</li>
-  <li>Stats PIN handy for saving at the end</li>
+<li>App opens and shows the four tabs</li>
+<li>Roster is loaded and current</li>
+<li>Opponent, date, and location entered on the <strong>Game</strong> tab</li>
+<li><strong>By Stat</strong> is selected on the Game tab</li>
+<li>Stats PIN known by whoever will save the game (you or the coach)</li>
 </ul>
-
-<div class="footer-contact">
-  Questions or anything looks off? Contact Drew Collier: 317-658-4777 or <a href="mailto:andrew.collier@gmail.com">andrew.collier@gmail.com</a>
-</div>
+<div class="footer-contact">Questions or anything looks off? Contact Drew Collier: 317-658-4777 or <a href="mailto:andrew.collier@gmail.com">andrew.collier@gmail.com</a></div>
 
 </body>
 </html>

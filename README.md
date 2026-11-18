@@ -1,5 +1,18 @@
 # lax_scorebook
-standalone scorebook for lacrosse stat tracking.
+
+The Fishers Tigers boys lacrosse scorebook: a web app scorekeepers use on a
+tablet or phone during games, plus a Google Sheet (and its Apps Script) that
+collects every game and builds season stats.
+
+- **App:** https://drewcollier.github.io/lax_scorebook/ (works offline; add it to
+  the home screen). The stats viewer is `viewer.html`.
+- **For scorekeepers:** [Scorekeeper Startup Guide](SCOREKEEPER-STARTUP-GUIDE.md)
+  ([PDF](SCOREKEEPER-STARTUP-GUIDE.pdf)) and the one-page
+  [Game-Day Checklist](GAME-DAY-CHECKLIST.pdf).
+- **How it fits together:** the app records every play on the device, then sends
+  the finished game to the Apps Script (with the Stats PIN), which writes it to
+  the workbook and rebuilds Game Log, Season Totals and MaxPreps Export.
+  Scoresheets and per-game MaxPreps files are made right in the app.
 
 ## Updating the Apps Script (Code.gs) without changing the link
 
@@ -116,3 +129,17 @@ Scoresheet* still works too.
 
 If you add a new file the app needs offline (a script, an image), add it to
 `ASSETS` in `sw.js`.
+
+## Updating the guide, checklist and screenshots
+
+Edit **`SCOREKEEPER-STARTUP-GUIDE.md`** (the HTML and PDF are generated from it)
+and **`GAME-DAY-CHECKLIST.html`**. Then, with Python 3 (`pip install markdown`),
+Node.js and Playwright (`npm install playwright`):
+
+1. `python3 -m http.server 8765` (in the repo folder; leave it running)
+2. `node tools/screenshots.js` - retakes every picture in `guide-images/` from the
+   current app, using made-up demo players
+3. `python3 tools/build_docs.py` - Markdown guide -> `SCOREKEEPER-STARTUP-GUIDE.html`
+4. `node tools/make_pdfs.js` - prints the guide and checklist to PDF
+
+The `tools/` folder is only for this; the app doesn't use it.
