@@ -6,8 +6,17 @@
 // ============================================================
 
 // The link actually used: the device override if one is set, else the built-in one.
-function getScriptUrl() {
-  var u = (state.settings && state.settings.scriptUrl) || '';
+// forTest: the TEST copy's link (Settings > Test mode). Left out = whatever
+// mode the app is in right now. A game always goes to the Sheet it was played
+// for (see game.isTest), whatever the mode is when it syncs.
+function getScriptUrl(forTest) {
+  var st = state.settings || {};
+  if (forTest === undefined) forTest = !!st.testMode;
+  if (forTest) {
+    if (st.testScriptUrl) return st.testScriptUrl;
+    return (typeof TEST_SCRIPT_URL === 'string' && /^https?:\/\//.test(TEST_SCRIPT_URL)) ? TEST_SCRIPT_URL : '';
+  }
+  var u = st.scriptUrl || '';
   if (u) return u;
   return /^https?:\/\//.test(DEFAULT_SCRIPT_URL) ? DEFAULT_SCRIPT_URL : '';
 }
@@ -69,6 +78,9 @@ function loadState() {
   }
   // Apply settings to UI
   document.getElementById('scriptUrl').value = state.settings.scriptUrl || '';
+  document.getElementById('testScriptUrl').value = state.settings.testScriptUrl || '';
+  document.getElementById('testModeCheck').checked = !!state.settings.testMode;
+  applyTestMode();
 }
 
 // In-game values that must survive a page reload during a game.

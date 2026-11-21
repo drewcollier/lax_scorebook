@@ -24,14 +24,14 @@ function renderHistory() {
     var hasEvents = g.events && g.events.length > 0;
 
     var info = '<div class="ghi-info">'
-      + '<div class="opponent">vs ' + escapeHtml(g.opponent) + '</div>'
+      + '<div class="opponent">vs ' + escapeHtml(g.opponent) + (g.isTest ? ' <span class="test-tag">TEST</span>' : '') + '</div>'
       + '<div class="meta">' + escapeHtml(g.date) + ' | ' + escapeHtml(g.location) + ' | ' + (g.eventCount || 0) + ' events</div>'
       + '<div class="score">' + escapeHtml(g.score) + '</div>'
       + '</div>';
 
     var control;
     if (synced || !hasEvents) {
-      control = '<span class="sync-control is-synced">Synced &#10003;</span>';
+      control = '<span class="sync-control is-synced">' + (g.isTest ? 'Synced to TEST' : 'Synced') + ' &#10003;</span>';
     } else if (syncInFlight[g.id]) {
       control = '<span class="sync-control needs-sync">Saving&hellip;</span>';
     } else {
@@ -59,8 +59,12 @@ function renderHistory() {
       var b2 = document.createElement('button');
       b2.textContent = 'MaxPreps file';
       b2.addEventListener('click', function() { downloadMaxPrepsCsv(g.id); });
+      var b3 = document.createElement('button');
+      b3.textContent = 'Save game file';
+      b3.addEventListener('click', function() { downloadGameFile(g.id); });
       ex.appendChild(b1);
       ex.appendChild(b2);
+      ex.appendChild(b3);
       item.querySelector('.ghi-info').appendChild(ex);
     }
 
@@ -98,4 +102,28 @@ function resetAllData() {
     });
   } catch (e) {}
   location.reload();
+}
+
+// "Save game file": the same file the script keeps in Drive for every saved
+// game (Lacrosse Scorebook Backups). Keep it as a spare copy; to restore from
+// it, put it in the season's backup folder in Drive and use
+// Lacrosse Tools > Restore a game. Holds no PIN.
+function downloadGameFile(gameId) {
+  var entry = null;
+  for (var i = 0; i < state.gameHistory.length; i++) if (state.gameHistory[i].id === gameId) entry = state.gameHistory[i];
+  if (!entry) return;
+  var data = buildExportPayload(entry, '').gameData;
+  var file = { kind: 'lax-scorebook-game', backupVersion: 1, savedAt: new Date().toISOString(),
+    from: 'scorebook app' + (entry.isTest ? ' (TEST game)' : ''), gameData: data };
+  var name = (String(entry.date || '') + ' ' + (entry.location === 'Away' ? 'at' : 'vs') + ' ' + (entry.opponent || 'Opponent')
+    + ' [' + entry.id + '].json').replace(/[\/\\:*?"<>|]+/g, '-');
+  if (entry.isTest) name = 'TEST ' + name;
+  var blob = new Blob([JSON.stringify(file, null, 1)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  showToast('Game file saved: ' + name, 'success');
 }

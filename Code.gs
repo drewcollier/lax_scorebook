@@ -13,6 +13,23 @@
 
 var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
 
+// Which workbook the web app writes to. The live script uses SHEET_ID above.
+// A TEST copy of the workbook records its own ID in Script Properties
+// (Lacrosse Tools > Make this the TEST copy), so it can never write to the
+// live Sheet. (A script running as a web app can't ask "which Sheet am I
+// attached to?", so the ID has to be written down.)
+function sheetId_() {
+  var p = PropertiesService.getScriptProperties();
+  var own = p.getProperty('SHEET_ID');
+  if (p.getProperty('IS_TEST') === '1') {
+    if (!own || own === SHEET_ID) throw new Error('This TEST copy is not set up yet (Lacrosse Tools > Make this the TEST copy).');
+    return own;
+  }
+  return own || SHEET_ID;
+}
+function book_() { return SpreadsheetApp.openById(sheetId_()); }
+function isTest_() { return PropertiesService.getScriptProperties().getProperty('IS_TEST') === '1'; }
+
 /**
  * Script version. The app asks for it (?action=version) to know it can use
  * confirmed (JSON) saves. Bump it when the app<->script protocol changes.
@@ -23,8 +40,10 @@ var SHEET_ID = '18VB2z8FmSvacq5E1XiwDEgxjcub99xk-xFz937I3h64';
  *   5 = MaxPreps Export tab written by the script (season to date)
  *   6 = family sign-in for the stats viewer (email code, own player only)
  *   7 = view-only coach PINs (VIEW_PINS) + lockout after too many wrong PINs
+ *   8 = TEST copy support, a backup file in Drive for every saved game,
+ *       Lacrosse Tools > Restore a game / Restore a season
  */
-var SCRIPT_VERSION = 7;
+var SCRIPT_VERSION = 8;
 
 /**
  * The scorekeeper PIN.
@@ -128,7 +147,9 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
   if (action === 'version') {
-    return jsonResponse({ success: true, version: SCRIPT_VERSION });
+    // test: true only in a TEST copy; the app checks it so a test game can't
+    // go to the live Sheet and a real game can't go to the TEST copy.
+    return jsonResponse({ success: true, version: SCRIPT_VERSION, test: isTest_() });
   }
 
   var output = ContentService.createTextOutput('Fishers Tigers Lacrosse Scorebook - Apps Script Active');
@@ -173,9 +194,16 @@ var PIN_ACTIONS = { exportGame: true, getRoster: true, getOfficials: true, getGa
 
 function routePost_(payload) {
   if (payload.test === true) {
-    return { success: true, version: SCRIPT_VERSION, message: 'Connection successful! Scorebook is linked.' };
+    var name = '';
+    try { name = book_().getName(); } catch (e) { name = ''; }
+    return { success: true, version: SCRIPT_VERSION, test: isTest_(), sheet: name,
+      message: 'Connection successful! Scorebook is linked.' };
   }
   // Family sign-in (stats viewer). These don't use the PIN; see FAMILY SIGN-IN.
+  // It is turned off in a TEST copy.
+  if (isTest_() && { requestCode: 1, verifyCode: 1, myStats: 1, signOut: 1 }[payload.action]) {
+    return { success: false, error: 'TEST_COPY', message: 'Family sign-in is turned off in the TEST copy.' };
+  }
   if (payload.action === 'requestCode') return requestCode_(payload);
   if (payload.action === 'verifyCode') return verifyCode_(payload);
   if (payload.action === 'myStats') return myStats_(payload);
@@ -204,7 +232,7 @@ function jsonResponse(data) {
 // ============================================================
 
 function getRoster_() {
-  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Players');
+  var sheet = book_().getSheetByName('Players');
   if (!sheet) return { success: false, error: 'Players tab not found' };
   var data = sheet.getDataRange().getValues();
   var players = [];
@@ -232,7 +260,7 @@ function isStarterFlag_(v) {
 }
 
 function getOfficials_() {
-  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Officials');
+  var sheet = book_().getSheetByName('Officials');
   if (!sheet) return { success: false, error: 'Officials tab not found' };
   var data = sheet.getDataRange().getValues();
   var officials = [];
@@ -245,7 +273,7 @@ function getOfficials_() {
 
 // The list of games (newest first) for the viewer's picker.
 function getGames_() {
-  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Games');
+  var sheet = book_().getSheetByName('Games');
   if (!sheet) return { success: false, error: 'Games tab not found' };
   var data = sheet.getDataRange().getValues();
   var games = [];
@@ -272,8 +300,8 @@ function getGames_() {
 }
 
 // All Event rows for one Game_ID (or every event if gameId is blank).
-function getEvents_(gameId) {
-  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Events');
+function getEvents_(gameId, ss) {
+  var sheet = (ss || book_()).getSheetByName('Events');
   if (!sheet) return { success: false, error: 'Events tab not found' };
   var data = sheet.getDataRange().getValues();
   var tz = Session.getScriptTimeZone();
@@ -331,7 +359,7 @@ function handleExportGame(gameData) {
     return { success: false, error: 'BUSY', message: 'Another game is being saved right now. Try again in a moment.' };
   }
   try {
-    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var ss = book_();
     var game = gameData.game;
     var gameId = String(game.Game_ID);
     var events = gameData.events || [];
@@ -343,12 +371,18 @@ function handleExportGame(gameData) {
     rebuildMaxPreps_(ss);
     SpreadsheetApp.flush();
 
+    // Keep a copy of exactly what was uploaded, as a file in Drive (see BACKUPS).
+    // A problem here never undoes the save itself.
+    var backup = '';
+    try { backup = backupGame_(ss, gameData).getName(); } catch (err) { backup = ''; }
+
     return {
       success: true,
       message: removed > 0 ? 'Game updated (replaced the earlier copy).' : 'Game exported successfully!',
       gameId: gameId,
       eventsWritten: events.length,
-      replaced: removed > 0
+      replaced: removed > 0,
+      backup: backup
     };
   } catch (err) {
     return { success: false, error: 'Export failed: ' + err.message };
@@ -856,11 +890,18 @@ function onOpen() {
     .addItem('Check for new sign-ups (Viewers)', 'checkNewSignUps')
     .addItem('Set up family sign-in', 'setupFamilySignIn')
     .addItem('Clear PIN lockout', 'clearPinLockout')
+    .addSeparator()
+    .addItem('Back up all games now', 'backupAllGames')
+    .addItem('Restore a game...', 'restoreGame')
+    .addItem('Restore a season...', 'restoreSeason')
+    .addSeparator()
+    .addItem('Make this the TEST copy', 'makeTestCopy')
+    .addItem('Clear all games (TEST copy only)', 'clearTestGames')
     .addToUi();
   // New sign-ups from the form show up in Viewers whenever the Sheet is opened.
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (ss.getSheetByName('Viewers')) syncFormResponses_(ss);
+    if (ss.getSheetByName('Viewers') && !isTest_()) syncFormResponses_(ss);
   } catch (err) {}
 }
 
@@ -1501,7 +1542,7 @@ function requestCode_(payload) {
   var lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
-    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var ss = book_();
     try { syncFormResponses_(ss); } catch (e) {}
     var rateKey = 'R_' + sha256_(email);
     var count = parseInt(cache.get(rateKey) || '0', 10);
@@ -1545,7 +1586,7 @@ function verifyCode_(payload) {
       return wrong;
     }
     cache.remove(key);
-    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var ss = book_();
     if (!playersForEmail_(ss, email).length) return { success: false, error: 'NOT_APPROVED', message: 'This email is not approved to view stats.' };
     var token = randomHex_();
     var props = PropertiesService.getScriptProperties();
@@ -1591,7 +1632,7 @@ var SEASON_KEYS = ['GP', 'G', 'A', 'Pts', 'S', 'SOG', 'Shooting %', 'GB', 'CT', 
 function myStats_(payload) {
   var email = sessionEmail_(payload.token);
   if (!email) return { success: false, error: 'NOT_SIGNED_IN', message: 'Please sign in again.' };
-  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var ss = book_();
   var ids = playersForEmail_(ss, email);
   if (!ids.length) return { success: false, error: 'NOT_APPROVED', message: 'This email is no longer approved to view stats.' };
   var mine = {};
@@ -1634,7 +1675,7 @@ function myStats_(payload) {
 // asks Google for permission to send the code emails (a test email goes to
 // you). Safe to run again.
 function setupFamilySignIn() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SHEET_ID);
+  var ss = SpreadsheetApp.getActiveSpreadsheet() || book_();
   viewersSheet_(ss);
   var added = syncFormResponses_(ss);
   refreshViewers_(ss);
@@ -1655,4 +1696,326 @@ function checkNewSignUps() {
   refreshViewers_(ss);
   SpreadsheetApp.getUi().alert(added ? added + ' new sign-up' + (added === 1 ? '' : 's') + ' added to the Viewers tab. Check Approved to let them in.'
     : 'No new sign-ups.');
+}
+
+
+// ============================================================
+// BACKUPS (a file in Google Drive for every saved game)
+//
+// Every time a game is saved, the exact upload (the same data the app sent,
+// without the PIN) is written to Drive:
+//   My Drive / Lacrosse Scorebook Backups / <workbook name> / <year> /
+//     2026-04-15 vs Carmel [G1713200000000].json
+// Re-saving a game updates its file. Lacrosse Tools has:
+//   - Back up all games now:  writes a file for every game already in the workbook
+//   - Restore a game...:      puts one game back from its file
+//   - Restore a season...:    rebuilds a whole season from its files, one by one
+// Before any restore, a copy of the whole workbook is saved to
+// ".../<workbook name>/Workbook copies", so a restore can always be undone.
+// The History screen in the app can also save the same file on the device
+// ("Save game file"); drop such a file into the year folder to restore it.
+// ============================================================
+var BACKUP_ROOT = 'Lacrosse Scorebook Backups';
+
+function isoDate_(d) {
+  if (Object.prototype.toString.call(d) === '[object Date]') {
+    return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  var m = String(d || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[0] : String(d || '');
+}
+
+// This workbook's backup folder (or one season's folder inside it).
+// Remembered per workbook, so a TEST copy never mixes into the team's backups.
+function backupFolder_(ss, year) {
+  var props = PropertiesService.getScriptProperties();
+  var key = 'BACKUP_FOLDER_' + ss.getId();
+  var folder = null;
+  var id = props.getProperty(key);
+  if (id) {
+    try { folder = DriveApp.getFolderById(id); if (folder.isTrashed()) folder = null; } catch (e) { folder = null; }
+  }
+  if (!folder) {
+    var roots = DriveApp.getFoldersByName(BACKUP_ROOT);
+    var root = roots.hasNext() ? roots.next() : DriveApp.createFolder(BACKUP_ROOT);
+    folder = root.createFolder(ss.getName());
+    props.setProperty(key, folder.getId());
+  }
+  if (!year) return folder;
+  var ys = folder.getFoldersByName(String(year));
+  return ys.hasNext() ? ys.next() : folder.createFolder(String(year));
+}
+
+function backupFileName_(g) {
+  var name = isoDate_(g.Date) + ' ' + (g.Location === 'Away' ? 'at' : 'vs') + ' ' + String(g.Opponent || 'Opponent') +
+    ' [' + g.Game_ID + '].json';
+  return name.replace(/[\/\\:*?"<>|]+/g, '-');
+}
+
+// Writes (or updates) the backup file for one game. Returns the Drive file.
+function backupGame_(ss, gameData) {
+  var g = gameData.game;
+  var date = isoDate_(g.Date);
+  var year = /^\d{4}/.test(date) ? date.slice(0, 4) : 'Undated';
+  var folder = backupFolder_(ss, year);
+  var content = JSON.stringify({
+    kind: 'lax-scorebook-game', backupVersion: 1, savedAt: new Date().toISOString(),
+    scriptVersion: SCRIPT_VERSION, workbook: ss.getName(),
+    gameData: { game: gameData.game, events: gameData.events || [] }
+  }, null, 1);
+  var name = backupFileName_(g);
+  var tag = '[' + g.Game_ID + ']';
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var f = files.next();
+    if (f.getName().indexOf(tag) >= 0) {
+      f.setContent(content);
+      if (f.getName() !== name) f.setName(name);
+      return f;
+    }
+  }
+  return folder.createFile(name, content, 'application/json');
+}
+
+// One game as it is in the workbook right now (same shape as an upload).
+var GAME_FIELDS = ['Game_ID', 'Date', 'Opponent', 'Location', 'Score', 'Game_Label', 'Weather_Temp', 'Weather_Cond',
+  'Game_Start', 'Head_Official', 'Umpire', 'Field_Judge', 'Tigers_Scorer', 'Tigers_Timer', 'Opp_Scorer'];
+function gamesInWorkbook_(ss) {
+  var sh = ss.getSheetByName('Games');
+  var out = [];
+  if (!sh || sh.getLastRow() < 2) return out;
+  var tz = Session.getScriptTimeZone();
+  sh.getRange(2, 1, sh.getLastRow() - 1, GAME_FIELDS.length).getValues().forEach(function(r, i) {
+    if (!String(r[0]).trim()) return;
+    var g = { row: i + 2 };
+    GAME_FIELDS.forEach(function(f, k) {
+      var v = r[k];
+      if (f === 'Date') v = isoDate_(v);
+      else if (Object.prototype.toString.call(v) === '[object Date]') v = Utilities.formatDate(v, tz, 'HH:mm');
+      g[f] = v === null || v === undefined ? '' : String(v);
+    });
+    delete g.Game_Label;
+    out.push(g);
+  });
+  return out;
+}
+
+// Lacrosse Tools > Back up all games now
+function backupAllGames() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var games = gamesInWorkbook_(ss);
+  var all = getEvents_('', ss).events || [];
+  var n = 0;
+  games.forEach(function(g) {
+    var row = g.row; delete g.row;
+    backupGame_(ss, { game: g, events: all.filter(function(e) { return e.Game_ID === g.Game_ID; }) });
+    n++;
+  });
+  SpreadsheetApp.getUi().alert('Backed up ' + n + ' game' + (n === 1 ? '' : 's') + '.\n\nThe files are in Google Drive:\n' +
+    BACKUP_ROOT + ' / ' + ss.getName());
+}
+
+// Every backup file for this workbook: [{ file, name, year, gameId, date }], oldest first.
+function listBackups_(ss) {
+  var out = [];
+  var years = backupFolder_(ss).getFolders();
+  while (years.hasNext()) {
+    var y = years.next();
+    if (!/^(\d{4}|Undated)$/.test(y.getName())) continue;
+    var files = y.getFiles();
+    while (files.hasNext()) {
+      var f = files.next();
+      var m = f.getName().match(/\[([^\]]+)\]\.json$/);
+      if (m) out.push({ file: f, name: f.getName().replace(/ \[[^\]]+\]\.json$/, ''), year: y.getName(), gameId: m[1] });
+    }
+  }
+  out.sort(function(a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+  return out;
+}
+
+function readBackup_(file) {
+  var d = JSON.parse(file.getBlob().getDataAsString());
+  if (!d || d.kind !== 'lax-scorebook-game' || !d.gameData || !d.gameData.game || !d.gameData.game.Game_ID) {
+    throw new Error(file.getName() + ' is not a scorebook game file.');
+  }
+  return d;
+}
+
+// Saves a copy of the whole workbook before a restore. Returns the copy's name.
+function safetyCopy_(ss, why) {
+  var parent = backupFolder_(ss);
+  var it = parent.getFoldersByName('Workbook copies');
+  var folder = it.hasNext() ? it.next() : parent.createFolder('Workbook copies');
+  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+  var name = ss.getName() + ' - before ' + why + ' ' + stamp;
+  DriveApp.getFileById(ss.getId()).makeCopy(name, folder);
+  return name;
+}
+
+// Removes these games (Events + Games rows) from the workbook.
+function removeGames_(ss, ids) {
+  var set = {};
+  ids.forEach(function(id) { set[String(id)] = true; });
+  [['Events', 2], ['Games', 1]].forEach(function(t) {
+    var sh = ss.getSheetByName(t[0]);
+    if (!sh || sh.getLastRow() < 2) return;
+    var vals = sh.getRange(2, t[1], sh.getLastRow() - 1, 1).getValues();
+    for (var i = vals.length - 1; i >= 0; i--) {
+      if (!set[String(vals[i][0])]) continue;
+      var end = i;
+      while (i - 1 >= 0 && set[String(vals[i - 1][0])]) i--;
+      sh.deleteRows(i + 2, end - i + 1);
+    }
+  });
+}
+
+// Puts games back from backup files, then rebuilds the stats once.
+function importBackups_(ss, items) {
+  items.forEach(function(d) {
+    var g = d.gameData.game, ev = d.gameData.events || [];
+    writeEvents_(ss, String(g.Game_ID), ev);
+    writeGameRow_(ss, g);
+  });
+  rebuildGameLog_(ss);
+  rebuildSeasonTotals_(ss);
+  rebuildMaxPreps_(ss);
+  SpreadsheetApp.flush();
+}
+
+function withLock_(fn) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    SpreadsheetApp.getUi().alert('A game is being saved right now. Try again in a minute.');
+    return;
+  }
+  try { fn(); } finally { lock.releaseLock(); }
+}
+
+// Lacrosse Tools > Restore a game...
+function restoreGame() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var list = listBackups_(ss);
+  if (!list.length) { ui.alert('There are no backup files yet. Use Lacrosse Tools > Back up all games now first.'); return; }
+  var lines = list.map(function(b, i) { return (i + 1) + '.  ' + b.name; }).join('\n');
+  var r = ui.prompt('Restore a game', 'Backup files:\n\n' + lines + '\n\nType the number of the game to restore:', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  var n = parseInt(String(r.getResponseText()).trim(), 10);
+  if (!(n >= 1 && n <= list.length)) { ui.alert('"' + r.getResponseText() + '" is not a number from the list. Nothing was changed.'); return; }
+  var pick = list[n - 1];
+  var d;
+  try { d = readBackup_(pick.file); } catch (e) { ui.alert('That file could not be read: ' + e.message + '\nNothing was changed.'); return; }
+  var ok = ui.alert('Restore ' + pick.name + '?',
+    'This replaces that game in the workbook with the backup saved ' + String(d.savedAt).slice(0, 16).replace('T', ' ') +
+    ' UTC (' + (d.gameData.events || []).length + ' plays).\n\nA copy of the whole workbook is saved first, so this can be undone.',
+    ui.ButtonSet.YES_NO);
+  if (ok !== ui.Button.YES) return;
+  withLock_(function() {
+    var copy = safetyCopy_(ss, 'restoring ' + pick.name);
+    importBackups_(ss, [d]);
+    ui.alert('Restored ' + pick.name + '.\n\nThe workbook as it was before is saved as "' + copy + '" in ' +
+      BACKUP_ROOT + ' / ' + ss.getName() + ' / Workbook copies.');
+  });
+}
+
+// Lacrosse Tools > Restore a season...
+function restoreSeason() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var list = listBackups_(ss);
+  var years = [];
+  list.forEach(function(b) { if (years.indexOf(b.year) < 0) years.push(b.year); });
+  if (!years.length) { ui.alert('There are no backup files yet. Use Lacrosse Tools > Back up all games now first.'); return; }
+  var r = ui.prompt('Restore a season', 'Seasons with backup files: ' + years.join(', ') + '\n\nType the season (year) to rebuild:', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  var year = String(r.getResponseText()).trim();
+  if (years.indexOf(year) < 0) { ui.alert('There are no backup files for "' + year + '". Nothing was changed.'); return; }
+  var files = list.filter(function(b) { return b.year === year; });
+  var data = [];
+  for (var i = 0; i < files.length; i++) {
+    try { data.push(readBackup_(files[i].file)); }
+    catch (e) { ui.alert('This file could not be read, so nothing was changed:\n' + files[i].name + '\n' + e.message); return; }
+  }
+  var inBook = gamesInWorkbook_(ss).filter(function(g) { return String(g.Date).slice(0, 4) === year || (year === 'Undated' && !/^\d{4}/.test(g.Date)); });
+  var backedUp = {};
+  files.forEach(function(b) { backedUp[b.gameId] = true; });
+  var noBackup = inBook.filter(function(g) { return !backedUp[g.Game_ID]; });
+  var msg = 'This rebuilds the ' + year + ' season from its ' + files.length + ' backup file' + (files.length === 1 ? '' : 's') + ':\n' +
+    '- the ' + inBook.length + ' game' + (inBook.length === 1 ? '' : 's') + ' from ' + year + ' now in the workbook are removed\n' +
+    '- then each backup file is loaded, one at a time\n' +
+    '- then Game Log, Season Totals and MaxPreps are rebuilt\n';
+  if (noBackup.length) {
+    msg += '\nWARNING: ' + noBackup.length + ' game(s) in the workbook have NO backup file and would be lost:\n' +
+      noBackup.map(function(g) { return '   ' + g.Date + ' ' + g.Opponent; }).join('\n') +
+      '\n(Choose No, run "Back up all games now", then try again.)\n';
+  }
+  msg += '\nA copy of the whole workbook is saved first, so this can be undone. Continue?';
+  if (ui.alert('Restore the ' + year + ' season?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  withLock_(function() {
+    var copy = safetyCopy_(ss, 'restoring ' + year + ' season');
+    removeGames_(ss, inBook.map(function(g) { return g.Game_ID; }));
+    importBackups_(ss, data);
+    ui.alert('The ' + year + ' season was rebuilt from ' + data.length + ' backup file' + (data.length === 1 ? '' : 's') + '.\n\n' +
+      'The workbook as it was before is saved as "' + copy + '" in ' + BACKUP_ROOT + ' / ' + ss.getName() + ' / Workbook copies.');
+  });
+}
+
+// ============================================================
+// TEST COPY
+// A copy of the workbook (File > Make a copy, name starting with "TEST") with
+// its own web app, for trying things out. The app's Test mode sends games
+// there. Run Lacrosse Tools > Make this the TEST copy IN THE COPY before
+// deploying it: that points its script at the copy (never the live Sheet),
+// clears the families' emails out of the copy, and turns family sign-in off.
+// ============================================================
+function makeTestCopy() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss.getId() === SHEET_ID) {
+    ui.alert('This is the live team workbook, so it can\'t be made the TEST copy.\n\n' +
+      'Use File > Make a copy, name the copy so it starts with TEST, open the copy, and run this there.');
+    return;
+  }
+  if (!/^test/i.test(ss.getName())) {
+    ui.alert('Rename this copy so its name starts with TEST (for example "TEST - Tigers Lacrosse"), then run this again.');
+    return;
+  }
+  var ok = ui.alert('Make this the TEST copy?',
+    'This workbook ("' + ss.getName() + '") becomes the TEST copy:\n' +
+    '- its script writes only to this workbook, never the team\'s\n' +
+    '- the Viewers tab and sign-up form answers are cleared (no family emails in the copy)\n' +
+    '- family sign-in is turned off here\n\nContinue?', ui.ButtonSet.YES_NO);
+  if (ok !== ui.Button.YES) return;
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('SHEET_ID', ss.getId());
+  props.setProperty('IS_TEST', '1');
+  var all = props.getProperties();
+  Object.keys(all).forEach(function(k) { if (k.indexOf('S_') === 0 || k.indexOf('BACKUP_FOLDER_') === 0) props.deleteProperty(k); });
+  ss.getSheets().forEach(function(sh) {
+    if ((sh.getName() === 'Viewers' || /^Form Responses/i.test(sh.getName())) && sh.getLastRow() >= 2) {
+      sh.deleteRows(2, sh.getLastRow() - 1);
+    }
+  });
+  ui.alert('Done. This is now the TEST copy.\n\nNext: Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone), ' +
+    'copy its web app URL, and paste it into the scorebook: Settings > Test mode > TEST script link.\n\n' +
+    'Check its PIN under Project Settings > Script Properties > WRITE_PIN.');
+}
+
+// Lacrosse Tools > Clear all games (TEST copy only)
+function clearTestGames() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!isTest_() || ss.getId() === SHEET_ID || PropertiesService.getScriptProperties().getProperty('SHEET_ID') !== ss.getId()) {
+    ui.alert('This only works in the TEST copy. Nothing was changed.');
+    return;
+  }
+  if (ui.alert('Clear all games?', 'Remove every game from this TEST copy (Events, Games, Game Log, Season Totals, MaxPreps)?', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  withLock_(function() {
+    removeGames_(ss, gamesInWorkbook_(ss).map(function(g) { return g.Game_ID; }).concat(
+      (getEvents_('', ss).events || []).map(function(e) { return e.Game_ID; })));
+    rebuildGameLog_(ss);
+    rebuildSeasonTotals_(ss);
+    rebuildMaxPreps_(ss);
+    ui.alert('All games were cleared from the TEST copy.');
+  });
 }

@@ -94,7 +94,7 @@ function changeWritePin() {
 // falls back to the original hidden-form method (unconfirmed) and asks you to
 // update the script.
 // ------------------------------------------------------------
-var scriptInfo = { url: '', version: 0 };
+var scriptInfoCache = {}; // url -> { version, test }
 var syncInFlight = {};
 
 function fetchWithTimeout(url, opts, ms) {
@@ -110,30 +110,34 @@ function fetchWithTimeout(url, opts, ms) {
   });
 }
 
-// Resolves to the script's version (1 = original script). Rejects when the
-// script can't be reached (no signal, bad URL).
-function getScriptVersion() {
-  var url = getScriptUrl();
-  if (scriptInfo.url === url && scriptInfo.version) return Promise.resolve(scriptInfo.version);
+// Resolves to { version, test } for a script link (version 1 = original
+// script; test = true only for the TEST copy). Rejects when the script can't
+// be reached (no signal, bad URL).
+function getScriptInfo(url) {
+  url = url || getScriptUrl();
+  if (scriptInfoCache[url]) return Promise.resolve(scriptInfoCache[url]);
   var sep = url.indexOf('?') === -1 ? '?' : '&';
   return fetchWithTimeout(url + sep + 'action=version', {}, 15000)
     .then(function(r) { return r.text(); })
     .then(function(text) {
-      var v = 1;
+      var info = { version: 1, test: false };
       try {
         var j = JSON.parse(text);
-        if (j && j.version) v = Number(j.version) || 1;
+        if (j && j.version) info = { version: Number(j.version) || 1, test: j.test === true };
       } catch (e) { /* plain-text reply = original script */ }
-      scriptInfo = { url: url, version: v };
-      return v;
+      scriptInfoCache[url] = info;
+      return info;
     });
+}
+function getScriptVersion(url) {
+  return getScriptInfo(url).then(function(info) { return info.version; });
 }
 
 // POST a JSON payload and return the script's parsed JSON reply.
 // (A plain string body is sent as text/plain, which Apps Script accepts
 // without a CORS pre-flight.)
-function postJson(payload) {
-  return fetchWithTimeout(getScriptUrl(), {
+function postJson(payload, url) {
+  return fetchWithTimeout(url || getScriptUrl(), {
     method: 'POST',
     body: JSON.stringify(payload)
   }, 45000)
@@ -145,8 +149,8 @@ function postJson(payload) {
 
 // Original method for scripts older than version 2: submit a hidden form into
 // the hidden iframe. The reply usually can't be read, so the save is unconfirmed.
-function legacyPostToScript(payload, callback) {
-  var url = getScriptUrl();
+function legacyPostToScript(payload, callback, url) {
+  url = url || getScriptUrl();
   if (!url) return;
   var handler = function(event) {
     if (event.data && event.data.type === 'scorebook_response') {
@@ -228,8 +232,12 @@ function pushGameFromHistory(gameId, mode) {
     if (state.gameHistory[i].id === gameId) { entry = state.gameHistory[i]; break; }
   }
   if (!entry) { showToast('Game not found in history.', 'error'); return Promise.resolve('skipped'); }
-  if (!getScriptUrl()) {
-    if (mode === 'manual') showToast('No Apps Script link is set up. Ask the coach.', 'warning');
+  // A TEST game goes only to the TEST copy; a real game only to the team Sheet.
+  var forTest = !!entry.isTest;
+  var url = getScriptUrl(forTest);
+  if (!url) {
+    if (mode === 'manual') showToast(forTest ? 'This is a TEST game, and no TEST script link is set up (Settings > Test mode).'
+      : 'No Apps Script link is set up. Ask the coach.', 'warning');
     return Promise.resolve('skipped');
   }
   if (!entry.events || entry.events.length === 0) {
@@ -238,7 +246,7 @@ function pushGameFromHistory(gameId, mode) {
   }
   if (syncInFlight[gameId]) return Promise.resolve('skipped');
 
-  var pin = loud ? getWritePin('Enter the stats PIN to save "' + entry.opponent + '" to the workbook.\n(Cancel to leave it in History and save it later.)') : getSavedPin();
+  var pin = loud ? getWritePin((forTest ? 'TEST GAME - enter the TEST copy\'s PIN to save "' : 'Enter the stats PIN to save "') + entry.opponent + '" to the ' + (forTest ? 'TEST workbook' : 'workbook') + '.\n(Cancel to leave it in History and save it later.)') : getSavedPin();
   if (!pin) {
     if (loud) showToast('Not saved yet. It\'s kept in History: tap Press to sync and enter the PIN when ready.', 'info');
     return Promise.resolve('skipped');
@@ -257,22 +265,32 @@ function pushGameFromHistory(gameId, mode) {
     return result;
   }
 
-  return getScriptVersion().then(function(version) {
+  return getScriptInfo(url).then(function(info) {
+    var version = info.version;
+    // Never send a game to the wrong workbook.
+    if (version >= 2 && info.test !== forTest) {
+      var wrong = forTest
+        ? 'This is a TEST game, but the TEST script link points to the team\'s live Sheet. Not sent. Fix the link in Settings > Test mode.'
+        : 'The script link points to the TEST copy, not the team Sheet. Not sent. Check Settings.';
+      if (loud) showToast(wrong, 'error');
+      return done('error', forTest ? 'TEST link points to the live Sheet - not sent' : 'Link points to the TEST copy - not sent');
+    }
     if (version < 2) {
+      if (forTest) { if (loud) showToast('The TEST copy\'s script is out of date. Not sent.', 'error'); return done('error', 'TEST script out of date'); }
       // Original script: can't confirm, and re-sending would add the game twice,
       // so never retry in the background.
       if (!loud) return done('skipped', entry.syncError);
-      legacyPostToScript(payload);
+      legacyPostToScript(payload, null, url);
       entry.synced = true;
       trimHistory();
       showToast('Sent to the workbook, but the Apps Script is out of date so the save can\'t be confirmed. Update the script (see the guide).', 'warning');
       return done('legacy');
     }
-    return postJson(payload).then(function(resp) {
+    return postJson(payload, url).then(function(resp) {
       if (resp && resp.success) {
         entry.synced = true;
         trimHistory();
-        showToast('Saved "' + entry.opponent + '" to the workbook ✓ (' + (resp.eventsWritten || 0) + ' events)', 'success');
+        showToast('Saved "' + entry.opponent + '" to the ' + (forTest ? 'TEST workbook' : 'workbook') + ' ✓ (' + (resp.eventsWritten || 0) + ' events)', 'success');
         return done('synced');
       }
       if (resp && resp.error === 'INVALID_PIN') {
@@ -301,10 +319,10 @@ function pushGameFromHistory(gameId, mode) {
 // Retry every unsynced game, one at a time, without prompting. Runs when the
 // app opens and when the device comes back online.
 function syncPendingGames() {
-  if (!getScriptUrl() || !getSavedPin()) return Promise.resolve();
+  if (!getSavedPin()) return Promise.resolve();
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve();
   var pending = state.gameHistory.filter(function(g) {
-    return g.synced !== true && g.events && g.events.length;
+    return g.synced !== true && g.events && g.events.length && getScriptUrl(!!g.isTest);
   }).map(function(g) { return g.id; });
   return pending.reduce(function(p, id) {
     return p.then(function() { return pushGameFromHistory(id, 'background'); });

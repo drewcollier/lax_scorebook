@@ -1159,3 +1159,10 @@ body {
   #scoresheetBody { padding: 0; min-width: 0; }
   #scoresheetBody * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Test mode (V3.33): orange bar + tag so a TEST game is never mistaken for a real one */
+.test-banner { display: none; position: sticky; top: 0; z-index: 2000; background: #fd7e14; color: #fff;
+  font-weight: 800; text-align: center; padding: 6px 8px; font-size: 0.85rem; letter-spacing: .3px; }
+.test-banner.show { display: block; }
+.test-tag { background: #fd7e14; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 6px;
+  border-radius: 4px; vertical-align: middle; }

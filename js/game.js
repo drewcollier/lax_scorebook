@@ -28,6 +28,9 @@ function finalizeStartGame() {
   if (!date) {
     date = localDateStr();
   }
+  if (state.settings.testMode && !confirm('TEST MODE is on.\n\nThis game will go to the TEST workbook, not the team\'s. Start it as a TEST game?\n\n(For a real game: Cancel, then turn Test mode off in Settings.)')) {
+    return;
+  }
 
   // Validate weather temp if provided: 32-95 (°F). Blank is allowed (optional).
   var tempRaw = (document.getElementById('metaWeatherTemp').value || '').trim();
@@ -60,6 +63,7 @@ function finalizeStartGame() {
     homeScore: 0,
     awayScore: 0,
     meta: meta,
+    isTest: !!state.settings.testMode, // a TEST game only ever goes to the TEST workbook
     events: []
   };
   state.currentQuarter = 'Q1';
@@ -241,6 +245,7 @@ function endGame() {
     homeScore: game.homeScore,
     awayScore: game.awayScore,
     meta: game.meta || {},    // v3.13: carry game meta (weather/officials/etc.) so re-push includes it
+    isTest: !!game.isTest,    // v3.33: TEST games sync only to the TEST workbook
     synced: false             // v3: set true only when a push confirms success
   });
 
@@ -296,6 +301,7 @@ function localDateStr() {
 }
 
 function renderGameUI() {
+  if (typeof applyTestMode === 'function') applyTestMode();
   var setup = document.getElementById('gameSetup');
   var active = document.getElementById('activeGameUI');
 
