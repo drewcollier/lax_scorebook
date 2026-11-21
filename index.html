@@ -12,6 +12,7 @@
 <script src="js/boot.js"></script>
 </head>
 <body>
+<div id="testBanner" class="test-banner"></div>
 
 <!-- NEW VERSION BAR (shown by the service worker code in <head>) -->
 <div id="updateBar" style="display:none; position:fixed; left:0; right:0; bottom:0; z-index:4000; gap:12px; align-items:center; justify-content:center; padding:12px; background:#1a73e8; color:#fff; font-weight:600; font-size:0.9rem;">
@@ -27,7 +28,7 @@
   <img src="logo.png" alt="FHS Tigers" width="69" height="50">
   <div>
     <h1>Tigers Lacrosse Scorebook</h1>
-    <div class="version">V3.32</div>
+    <div class="version">V3.33</div>
   </div>
 </div>
 
@@ -215,6 +216,21 @@
     <p id="connectionStatus" style="margin-top:8px; font-size:0.8rem; color:var(--text-secondary);"></p>
   </div>
   <div class="settings-section">
+    <h3>Test mode</h3>
+    <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">
+      For trying things out. While it's on, new games are TEST games: they go only to the TEST copy of the workbook,
+      never the team's. An orange bar shows at the top. A game always goes to the workbook it was started for.
+    </p>
+    <input type="text" class="settings-input" id="testScriptUrl" placeholder="TEST script link (the TEST copy's web app URL)">
+    <div class="flex-row" style="align-items:center;">
+      <button class="btn btn-secondary" onclick="saveTestUrl()">Save link</button>
+      <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem;">
+        <input type="checkbox" id="testModeCheck" onchange="setTestMode(this.checked)">
+        Test mode
+      </label>
+    </div>
+  </div>
+  <div class="settings-section">
     <h3>Stats PIN</h3>
     <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">
       The PIN is needed to pull the roster/officials and to save a game to the workbook. Keeping score never needs it.
@@ -234,7 +250,7 @@
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:0.8rem; color:var(--text-secondary);">
-      Fishers Tigers Lacrosse Scorebook V3.32<br>
+      Fishers Tigers Lacrosse Scorebook V3.33<br>
       <span id="storageStatus"></span><br>
       Event-based recording with offline-first architecture.<br>
       Built for sideline use during live games.

@@ -76,7 +76,7 @@ device only.
 |---|---|
 | `index.html` | The scorebook's screens and pop-ups (markup only) |
 | `css/app.css` | All scorebook styles, including the printable scoresheet |
-| `js/config.js` | The built-in script link (shared with the viewer) and the sign-up form link |
+| `js/config.js` | The built-in script link (shared with the viewer), the TEST copy's link and the sign-up form link |
 | `js/boot.js` | Offline support start-up, "new version" bar, storage protection |
 | `js/state.js` | App state, saving it on the device, helpers, tab switching |
 | `js/game.js` | Start/end game, Start-Game details, quarters, timeouts, EMO |
@@ -146,6 +146,55 @@ their device. The coach can still see the whole team with **Use the Stats PIN**.
   `js/config.js`.
 - Sign-ins are kept in Script Properties as `S_...` entries (fingerprints only,
   never the real token). They clean themselves up; don't edit them.
+
+## Backups and restoring
+
+Every time a game is saved, the script also writes exactly what was uploaded
+(the game and every play; never the PIN) to a file in your Google Drive:
+
+`My Drive / Lacrosse Scorebook Backups / <workbook name> / <year> / 2026-04-15 vs Carmel [G...].json`
+
+Re-saving a game updates its file. **Lacrosse Tools** has:
+
+| Menu item | What it does |
+|---|---|
+| **Back up all games now** | Writes a file for every game already in the workbook (run it once to cover games saved before backups existed). |
+| **Restore a game...** | Lists the backup files, you type a number, it puts that game back (plays, Games row) and rebuilds the stats. |
+| **Restore a season...** | You type the year; it removes that year's games from the workbook and loads every backup file for that year, one at a time, then rebuilds the stats. It warns you first, by name, about any game that has no backup file. |
+
+- Before any restore, a **copy of the whole workbook** is saved to
+  `.../<workbook name>/Workbook copies`, so a restore can always be undone.
+- Restoring the same game twice never doubles it.
+- **Save game file** (History, in the app) downloads the same kind of file to the
+  device. To restore from it, put it in the right year folder in Drive and use
+  **Restore a game**.
+- Google Sheets also keeps its own **File -> Version history**. Name a version
+  (**File -> Version history -> Name current version**) before big changes.
+- The first save after updating the script asks Google for permission to use
+  your Drive (it creates the backup folder and files).
+
+## The TEST copy and Test mode
+
+For trying things out without touching the real data:
+
+1. In the team workbook: **File -> Make a copy**. Name it so it **starts with TEST**
+   (for example `TEST - Tigers Lacrosse`). Open the copy.
+2. In the copy: **Lacrosse Tools -> Make this the TEST copy**. This points the
+   copy's script at the copy (it can never write to the team workbook), clears the
+   families' emails out of the copy, and turns family sign-in off there.
+3. In the copy: **Extensions -> Apps Script -> Deploy -> New deployment -> Web app**
+   (Execute as: Me, Who has access: Anyone). Copy the web app URL.
+4. In the scorebook: **Settings -> Test mode**, paste the link, **Save link**, tick
+   **Test mode**. An orange bar shows at the top.
+
+While Test mode is on, every new game is a **TEST game**: it asks first, carries
+an orange TEST tag in History, and only ever goes to the TEST copy, even if Test
+mode is switched off before it syncs. Real games only ever go to the team
+workbook. The app checks with the script before sending and refuses (keeping the
+game on the device) if a link points at the wrong workbook. **Test Connection**
+says which workbook a link reaches.
+
+In the TEST copy, **Lacrosse Tools -> Clear all games (TEST copy only)** empties it.
 
 ## Scoresheet and MaxPreps file in the app
 
