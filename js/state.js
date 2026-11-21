@@ -143,6 +143,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
     this.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
     if (tab === 'roster') renderRoster();
+    if (tab === 'penalties') renderPenaltiesTab();
     if (tab === 'history') renderHistory();
     if (tab === 'settings') {
       var ss = document.getElementById('storageStatus');
