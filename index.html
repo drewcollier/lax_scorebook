@@ -28,13 +28,14 @@
   <img src="logo.png" alt="FHS Tigers" width="69" height="50">
   <div>
     <h1>Tigers Lacrosse Scorebook</h1>
-    <div class="version">V3.33</div>
+    <div class="version">V3.34</div>
   </div>
 </div>
 
 <!-- TAB BAR -->
 <div class="tab-bar">
   <button class="tab-btn active" data-tab="game">Game</button>
+  <button class="tab-btn" data-tab="penalties">Penalties</button>
   <button class="tab-btn" data-tab="roster">Roster</button>
   <button class="tab-btn" data-tab="history">History</button>
   <button class="tab-btn" data-tab="settings">Settings</button>
@@ -94,6 +95,7 @@
       </div>
     </div>
 
+    <div id="foulWatch" class="foul-watch" style="display:none;"></div>
     <div id="activePenalties" class="active-pens" style="display:none;"></div>
 
     <!-- Action Buttons Row -->
@@ -201,6 +203,11 @@
   <button class="btn btn-secondary mt-16" onclick="clearHistory()">Clear Local History</button>
 </div>
 
+<!-- PENALTIES TAB: running totals for both teams (fouling out = 5:00 of personal fouls) -->
+<div class="tab-content" id="tab-penalties">
+  <div id="penaltiesView"></div>
+</div>
+
 <!-- SETTINGS TAB -->
 <div class="tab-content" id="tab-settings">
   <div class="settings-section">
@@ -250,7 +257,7 @@
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:0.8rem; color:var(--text-secondary);">
-      Fishers Tigers Lacrosse Scorebook V3.33<br>
+      Fishers Tigers Lacrosse Scorebook V3.34<br>
       <span id="storageStatus"></span><br>
       Event-based recording with offline-first architecture.<br>
       Built for sideline use during live games.
@@ -524,6 +531,15 @@
   </div>
 </div>
 
+<!-- ONE PLAYER'S PENALTIES (from the Penalties tab or the foul-out strip) -->
+<div class="modal-overlay" id="foulDetailModal">
+  <div class="modal">
+    <h3 id="foulDetailTitle"></h3>
+    <div id="foulDetailBody"></div>
+    <button class="btn btn-secondary" onclick="closeFoulDetail()" style="width:100%; margin-top:12px;">Close</button>
+  </div>
+</div>
+
 <!-- PENALTY NOTICE (a goal found penalties that had already run out) -->
 <div class="modal-overlay" id="penaltyNoticeModal">
   <div class="modal">
@@ -621,6 +637,7 @@
 <script src="js/stat-entry.js"></script>
 <script src="js/actions.js"></script>
 <script src="js/event-log.js"></script>
+<script src="js/penalties.js"></script>
 <script src="js/roster.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/settings.js"></script>

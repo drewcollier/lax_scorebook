@@ -23,7 +23,7 @@ function computeGameStats(entry) {
   var g = {
     players: {}, goals: [], penalties: [],
     tigersQ: zeroQ(), oppQ: zeroQ(), gbQ: zeroQ(), shotQ: zeroQ(),
-    clearGoodQ: zeroQ(), clearFailQ: zeroQ(), emoScoredQ: zeroQ(), emoFailQ: zeroQ(),
+    clearGoodQ: zeroQ(), clearFailQ: zeroQ(), rideGoodQ: zeroQ(), rideFailQ: zeroQ(), emoScoredQ: zeroQ(), emoFailQ: zeroQ(),
     fowQ: zeroQ(), folQ: zeroQ(), timeouts: { h1: 0, h2: 0, ot1: 0, ot2: 0 }, otPlayed: 0
   };
   function P(id) {
@@ -54,6 +54,8 @@ function computeGameStats(entry) {
     else if (type === 'GA') { P(prim).ga++; }
     else if (type === 'Clear_Good') { if (inQ) g.clearGoodQ[per]++; }
     else if (type === 'Clear_Fail') { if (inQ) g.clearFailQ[per]++; }
+    else if (type === 'Ride_Good') { if (inQ) g.rideGoodQ[per]++; }
+    else if (type === 'Ride_Fail') { if (inQ) g.rideFailQ[per]++; }
     else if (type === 'EMO_Success') { if (inQ) g.emoScoredQ[per]++; }
     else if (type === 'EMO_Fail') { if (inQ) g.emoFailQ[per]++; }
     else if (type === 'TIMEOUT') {
@@ -177,18 +179,29 @@ function scoresheetHtml(entry) {
     var isG = (roster[id] && roster[id].Position === 'Goalie') || (s.saves + s.ga) > 0;
     if (!isG) return;
     saveRows += '<tr><td><b>' + esc(jersey(id)) + '</b></td>' + SS_PERIODS.map(function(q) { return '<td>' + s.savesQ[q] + '</td>'; }).join('')
-      + '<td><b>' + s.saves + '</b></td></tr>';
+      + '<td><b>' + s.saves + '</b></td><td><b>' + pct(s.saves, s.saves + s.ga) + '</b></td></tr>';
   });
-  if (!saveRows) saveRows = '<tr><td colspan="8">&nbsp;</td></tr>';
+  if (!saveRows) saveRows = '<tr><td colspan="9">&nbsp;</td></tr>';
 
-  function qBox(title, cols, series) {
-    var head = cols.length ? '<thead><tr><th></th>' + cols.map(function(c) { return '<th>' + c + '</th>'; }).join('') + '</tr></thead>' : '';
+  // "XX.X%" (or a dash when nothing was attempted).
+  function pct(made, tries) { return tries > 0 ? (Math.round(made / tries * 1000) / 10).toFixed(1) + '%' : '&ndash;'; }
+
+  // A quarter-by-quarter box. groups (optional): [[label, columns spanned], ...]
+  // for a second header row (Clears | Rides). pcts (optional): [[text, columns
+  // spanned], ...] for a percentage line under TOT.
+  function qBox(title, cols, series, pcts, groups) {
+    var head = '';
+    if (groups) head += '<tr><th></th>' + groups.map(function(x) { return '<th colspan="' + x[1] + '">' + x[0] + '</th>'; }).join('') + '</tr>';
+    if (cols.length) head += '<tr><th></th>' + cols.map(function(c) { return '<th>' + c + '</th>'; }).join('') + '</tr>';
+    if (head) head = '<thead>' + head + '</thead>';
     var body = SS_PERIODS.map(function(q) {
       return '<tr><td class="qh">' + q + '</td>' + series.map(function(o) { return '<td>' + o[q] + '</td>'; }).join('') + '</tr>';
     }).join('');
     body += '<tr class="tot"><td class="qh">TOT</td>' + series.map(function(o) { return '<td><b>' + g.sumQ(o) + '</b></td>'; }).join('') + '</tr>';
+    if (pcts) body += '<tr class="pct"><td class="qh">%</td>' + pcts.map(function(x) { return '<td colspan="' + x[1] + '"><b>' + x[0] + '</b></td>'; }).join('') + '</tr>';
     return '<div class="box"><div class="box-t">' + title + '</div><table class="qt">' + head + '<tbody>' + body + '</tbody></table></div>';
   }
+  var S = g.sumQ;
 
   // Scoring timeline: every goal, in order (wraps to more rows as needed).
   var cells = Math.max(28, Math.ceil(g.goals.length / 14) * 14);
@@ -230,7 +243,7 @@ function scoresheetHtml(entry) {
     + '<table class="roster"><thead><tr><th class="pos"></th><th class="num">#</th><th class="nm left">PLAYER</th>'
     + '<th>SH</th><th>SOG</th><th>G</th><th>A</th><th>GB</th></tr></thead><tbody>' + rosterRows + '</tbody></table>'
     + '<div class="box-t">SAVES BY QUARTER</div><table class="saves"><thead><tr><th>#</th>'
-    + SS_PERIODS.map(function(q) { return '<th>' + q + '</th>'; }).join('') + '<th>TOT</th></tr></thead><tbody>' + saveRows + '</tbody></table>'
+    + SS_PERIODS.map(function(q) { return '<th>' + q + '</th>'; }).join('') + '<th>TOT</th><th>SV%</th></tr></thead><tbody>' + saveRows + '</tbody></table>'
     + '</div><div class="c-mid">'
     + '<div class="section-title">PENALTIES / FOULS</div><table><thead><tr><th>P/T</th><th>#</th><th class="left">PENALTY</th><th>QTR</th><th>TIME</th></tr></thead><tbody>' + penRows + '</tbody></table>'
     + '<div class="section-title">INDIVIDUAL SCORING</div><table><thead><tr><th>#</th><th class="left">NAME</th><th>G</th><th>A</th><th>PTS</th></tr></thead><tbody>' + scoringRows + '</tbody></table>'
@@ -244,10 +257,12 @@ function scoresheetHtml(entry) {
     + '<tr><td class="left"><b>Field Judge</b></td><td class="left">' + esc(meta.fieldJudge) + '</td></tr>'
     + '<tr><td class="left"><b>Opp Scorer</b></td><td class="left">' + esc(meta.oppScorer) + '</td></tr></tbody></table>'
     + '</div><div class="c-right">'
-    + qBox('GROUNDBALLS', [], [g.gbQ]) + qBox('SHOTS', [], [g.shotQ])
-    + qBox('CLEARS', ['Clrd', 'Fail'], [g.clearGoodQ, g.clearFailQ])
-    + qBox('EXTRA MAN', ['Scrd', 'Fail'], [g.emoScoredQ, g.emoFailQ])
-    + qBox('FACEOFFS', ['Won', 'Lost'], [g.fowQ, g.folQ])
+    + qBox('GROUNDBALLS', [], [g.gbQ]) + qBox('SHOTS', [], [g.shotQ], [[pct(g.us, S(g.shotQ)) + ' scored', 1]])
+    + qBox('CLEARS / RIDES', ['Clears', 'Fail', 'Ride', 'Fail'], [g.clearGoodQ, g.clearFailQ, g.rideGoodQ, g.rideFailQ],
+      [[pct(S(g.clearGoodQ), S(g.clearGoodQ) + S(g.clearFailQ)), 2], [pct(S(g.rideGoodQ), S(g.rideGoodQ) + S(g.rideFailQ)), 2]],
+      [['Clears', 2], ['Rides', 2]])
+    + qBox('EXTRA MAN', ['Scrd', 'Fail'], [g.emoScoredQ, g.emoFailQ], [[pct(S(g.emoScoredQ), S(g.emoScoredQ) + S(g.emoFailQ)), 2]])
+    + qBox('FACEOFFS', ['Won', 'Lost'], [g.fowQ, g.folQ], [[pct(S(g.fowQ), S(g.fowQ) + S(g.folQ)), 2]])
     + '</div></div>'
     + '<div class="footer"><div>Date: ' + esc(entry.date) + '</div><div>Site: ' + esc(entry.location) + '</div>'
     + '<div>Weather: ' + esc(weather) + '</div><div>Game Start: ' + esc(meta.gameStart) + '</div>'

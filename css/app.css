@@ -1142,6 +1142,7 @@ body {
 #scoresheetBody .box { margin-bottom: 3px; }
 #scoresheetBody .box table.qt td.qh { background: #f2f2f2; font-weight: bold; width: 30px; }
 #scoresheetBody .box table.qt tr.tot td { background: #eee; }
+#scoresheetBody .box table.qt tr.pct td { background: #e2e2e2; }
 #scoresheetBody .tl { display: grid; grid-template-columns: repeat(14, 1fr); border: 1px solid #000; }
 #scoresheetBody .tl-cell { border: 1px solid #000; min-height: 26px; text-align: center; }
 #scoresheetBody .tl-n { background: #e6e6e6; font-weight: bold; font-size: 6.5pt; border-bottom: 1px solid #000; }
@@ -1166,3 +1167,30 @@ body {
 .test-banner.show { display: block; }
 .test-tag { background: #fd7e14; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 6px;
   border-radius: 4px; vertical-align: middle; }
+
+/* Penalties tab + foul-out strip (V3.34) */
+#tab-penalties { padding: 12px; }
+.pen-rule { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.35; }
+.pen-empty { font-size: 0.85rem; color: var(--text-secondary); padding: 6px 0 12px; }
+.pen-team h3 { font-size: 0.95rem; margin: 10px 0 6px; }
+.pen-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.pen-table th { font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-align: center; padding: 4px; border-bottom: 1px solid rgba(255,255,255,.15); }
+.pen-table td { text-align: center; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.pen-table .l { text-align: left; }
+.pen-row { cursor: pointer; }
+.pen-row.warn td { background: rgba(255, 193, 7, .18); }
+.pen-row.danger td { background: rgba(253, 126, 20, .30); }
+.pen-row.out td { background: rgba(220, 53, 69, .40); }
+.pen-out { background: #dc3545; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; }
+.pen-inhome { font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 4px; }
+.foul-watch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; }
+.foul-watch .fw-title { font-size: 0.7rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; }
+.fw-chip { border: none; border-radius: 14px; padding: 5px 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; color: #1a1a2e; background: #ffc107; }
+.fw-chip.danger { background: #fd7e14; color: #fff; }
+.fw-chip.out { background: #dc3545; color: #fff; }
+.fd-status { font-weight: 800; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; background: rgba(255,255,255,.08); font-size: 0.9rem; }
+.fd-status.warn { background: rgba(255, 193, 7, .25); }
+.fd-status.danger { background: rgba(253, 126, 20, .45); }
+.fd-status.out { background: #dc3545; color: #fff; }
+.fd-sum { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; }
+.fd-nr { background: #6c757d; color: #fff; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; }

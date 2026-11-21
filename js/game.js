@@ -302,6 +302,7 @@ function localDateStr() {
 
 function renderGameUI() {
   if (typeof applyTestMode === 'function') applyTestMode();
+  if (typeof renderFoulWatch === 'function') renderFoulWatch();
   var setup = document.getElementById('gameSetup');
   var active = document.getElementById('activeGameUI');
 

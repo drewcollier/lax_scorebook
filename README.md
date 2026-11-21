@@ -84,6 +84,7 @@ device only.
 | `js/stat-entry.js` | Player grid, By Stat entry, shot zones, `logStat()` |
 | `js/actions.js` | Team/opponent actions, penalty pop-up, goal clock, assists, ejections |
 | `js/event-log.js` | Event Log and Undo |
+| `js/penalties.js` | Penalties tab, foul-out strip on the game screen, one player's penalties |
 | `js/roster.js` | Roster screen and pulling roster/officials |
 | `js/sync.js` | The PIN and sending games to the workbook |
 | `js/settings.js` | Settings screen, Test Connection |
@@ -195,6 +196,21 @@ game on the device) if a link points at the wrong workbook. **Test Connection**
 says which workbook a link reaches.
 
 In the TEST copy, **Lacrosse Tools -> Clear all games (TEST copy only)** empties it.
+
+## Penalties tab (foul-out tracking)
+
+- **Penalties** tab (next to Game): every player on both teams who has a
+  penalty, with personal fouls (count and time), technical fouls and total
+  time, most personal time first. Rows turn yellow at 3:00, orange at 4:00 and
+  red when fouled out. In-Home (team) fouls are listed separately.
+- **Tap a player** for every penalty: quarter, clock, penalty, personal or
+  technical, time, and how much personal time is left before fouling out.
+- **Game screen:** a small "Fouls" strip appears only once someone reaches 3:00
+  of personal fouls (e.g. "Opp #22 4:00"); tap a name for the breakdown. It
+  never gets in the way of the Penalty button.
+- Rule used: 5:00 of personal fouls = fouled out, however many fouls; technical
+  fouls don't count. Totals are worked out from the recorded penalties every
+  time, so Undo is reflected straight away.
 
 ## Scoresheet and MaxPreps file in the app
 

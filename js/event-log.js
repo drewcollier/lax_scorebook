@@ -6,6 +6,7 @@
 // ============================================================
 
 function renderEventLog() {
+  if (typeof renderFoulWatch === 'function') renderFoulWatch(); // keep the foul-out strip current
   var list = document.getElementById('eventLogList');
   if (!list || !state.activeGame) return;
   list.innerHTML = '';
