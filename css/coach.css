@@ -1,0 +1,32 @@
+/* css/coach.css - extra styles for the coaches' page (coach.html); builds on viewer.css. */
+.hide { display: none !important; }
+.hdr-right { display: flex; gap: 8px; align-items: center; }
+.btn.small { padding: 5px 10px; font-size: 12px; }
+input[type=password] { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 15px; }
+.note { font-size: .88rem; margin: 0 0 10px; line-height: 1.4; }
+.note.small { font-size: .78rem; color: var(--muted); margin: -4px 0 8px; }
+.status.err { color: var(--red-dark); font-weight: 600; }
+.ctabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.ctab { flex: 1; padding: 10px; border: 1px solid var(--line); background: #fff; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
+.ctab.active { background: var(--red); color: #fff; border-color: var(--red); }
+.scroll { overflow-x: auto; }
+.gh { margin-top: 10px; }
+.gh .score { font-size: 1.25rem; font-weight: 800; margin-bottom: 6px; }
+.gh .score .w { color: #15803d; } .gh .score .l { color: var(--red-dark); }
+.gh .sub { font-size: .82rem; color: var(--muted); margin-bottom: 8px; }
+table.cmp td:first-child, table.cmp th:first-child { text-align: left; }
+table.cmp td.us { font-weight: 700; }
+table.cmp tr.sec td { background: var(--ink); color: #fff; font-weight: 700; text-align: left; font-size: .72rem; letter-spacing: .5px; }
+table.sortable th { cursor: pointer; user-select: none; white-space: nowrap; }
+table.sortable th.sorted::after { content: ' \25BE'; }
+table.sortable th.sorted.asc::after { content: ' \25B4'; }
+table td.nm, table th.nm { text-align: left; white-space: nowrap; }
+tr.tot td { background: #efeff2; font-weight: 700; }
+tr.click { cursor: pointer; } tr.click:hover td { background: #fff5f5; }
+.pens { display: flex; gap: 12px; flex-wrap: wrap; }
+.pens > div { flex: 1; min-width: 300px; }
+.pens h3 { font-size: .9rem; margin: 4px 0 6px; }
+.pen-sum { font-size: .82rem; margin: 6px 0 0; color: var(--muted); }
+.out-tag { background: var(--red); color: #fff; font-size: .65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; }
+.foot { text-align: center; font-size: .75rem; color: var(--muted); padding: 14px 0 24px; }
+.empty { color: var(--muted); font-size: .85rem; padding: 6px 0; }

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fishers Tigers Lacrosse — Coaches</title>
+<link rel="stylesheet" href="css/viewer.css">
+<link rel="stylesheet" href="css/coach.css">
+</head>
+<body>
+<header>
+  <div class="brand">FISHERS TIGERS <span>LACROSSE</span> — Coaches</div>
+  <div class="hdr-right">
+    <span class="tag">READ ONLY</span>
+    <button class="btn sec small hide" id="refreshBtn" onclick="loadAll()">Refresh</button>
+    <button class="btn sec small hide" id="lockBtn" onclick="lockPage()">Lock</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- PIN (kept in memory for this visit only; never stored, never in a URL) -->
+  <div class="card" id="pinCard">
+    <h2>Coaches' page</h2>
+    <p class="note">Enter your coach PIN to see every stat from every game.</p>
+    <div class="row">
+      <div style="flex:2;">
+        <label class="fld" for="pinInput">Coach PIN</label>
+        <input type="password" id="pinInput" inputmode="numeric" autocomplete="off"
+               onkeydown="if(event.key==='Enter')unlock()">
+      </div>
+      <div style="flex:0; display:flex; align-items:flex-end;">
+        <button class="btn" id="unlockBtn" onclick="unlock()">Open</button>
+      </div>
+    </div>
+    <div class="status" id="pinStatus"></div>
+  </div>
+
+  <div id="main" class="hide">
+    <nav class="ctabs">
+      <button class="ctab active" data-view="game">Game</button>
+      <button class="ctab" data-view="season">Season</button>
+      <button class="ctab" data-view="players">Players</button>
+    </nav>
+    <div class="status" id="loadStatus"></div>
+
+    <!-- GAME -->
+    <section id="view-game">
+      <div class="card">
+        <label class="fld" for="gamePick">Game</label>
+        <select id="gamePick" onchange="renderGame()"></select>
+        <div id="gameHead"></div>
+      </div>
+      <div class="card"><h2>Team Stats</h2><div id="gameTeam"></div></div>
+      <div class="card"><h2>Players</h2><p class="note small">Tap a column heading to sort.</p><div id="gamePlayers"></div></div>
+      <div class="card"><h2>Penalties</h2><div id="gamePens"></div></div>
+    </section>
+
+    <!-- SEASON -->
+    <section id="view-season" class="hide">
+      <div class="card"><h2>Season</h2><div id="seasonHead"></div></div>
+      <div class="card"><h2>Game by Game</h2><p class="note small">Tap a game to open it.</p><div id="seasonGames"></div></div>
+      <div class="card"><h2>Season Team Stats</h2><div id="seasonTeam"></div></div>
+    </section>
+
+    <!-- PLAYERS -->
+    <section id="view-players" class="hide">
+      <div class="card"><h2>Players — Season</h2><p class="note small">Tap a column heading to sort.</p><div id="seasonPlayers"></div></div>
+    </section>
+  </div>
+
+  <div class="foot">Fishers Tigers Lacrosse &bull; coaches' page &bull; data from Google Sheets</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/coach.js"></script>
+</body>
+</html>
