@@ -92,6 +92,7 @@ device only.
 | `js/history.js` | History screen, Reset All Local Data |
 | `js/main.js` | Start-up (loaded last) |
 | `viewer.html`, `css/viewer.css`, `js/viewer.js` | The stats viewer |
+| `coach.html`, `css/coach.css`, `js/coach.js` | The coaches' page (every stat, every game; coach PIN) |
 | `sw.js` | Offline support (list every file the app needs in `ASSETS`) |
 | `Code.gs` | The Google Apps Script (paste into the script editor) |
 
@@ -211,6 +212,25 @@ In the TEST copy, **Lacrosse Tools -> Clear all games (TEST copy only)** empties
 - Rule used: 5:00 of personal fouls = fouled out, however many fouls; technical
   fouls don't count. Totals are worked out from the recorded penalties every
   time, so Undo is reflected straight away.
+
+## Coaches' page
+
+`coach.html` (linked from the viewer's sign-in screen) opens with a **coach PIN**
+(`VIEW_PINS`) or the scorebook PIN. The PIN is typed on the page, kept only in
+memory, and **Lock** forgets it. Read only; no script change needed.
+
+- **Game:** result and score by quarter; Tigers vs opponent team stats (goals,
+  shots, shots on goal, shooting %, saves/save %, faceoffs, ground balls,
+  turnovers, caused turnovers, interceptions, clears, rides, extra man, man-up
+  goals, penalties and penalty time); every player's stats (tap a heading to
+  sort); both teams' penalty lists with totals, opponents by jersey.
+- **Season:** record, game by game (tap a game to open it) with a season row,
+  and season team stats vs all opponents.
+- **Players:** every player's season stats, sortable.
+
+Opponent numbers are only what the scorekeeper records about them: goals,
+shots, shots on goal, faceoffs (our losses) and penalties. Everything is worked
+out from the recorded plays, so it always matches the Events tab.
 
 ## Scoresheet and MaxPreps file in the app
 
