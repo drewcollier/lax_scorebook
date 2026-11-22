@@ -592,8 +592,13 @@ function logStat(metric, playerArg, opts) {
   var zoneStartIndex = state.activeGame.events.length; // v3: mark cascade start for zone stamping
 
   // Cascaded rows go FIRST so the primary stat is the last row of the tap:
-  // Goal = Shot + SOG + Goal, SOG = Shot + SOG.
-  if (metric === 'Goal') {
+  // Goal = Shot + SOG + Goal, SOG = Shot + SOG,
+  // Interception = Caused Turnover + Ground Ball + Interception (V3.39: the
+  // NCAA men's statisticians' manual, which NFHS points scorers to, credits an
+  // intercepted pass as a caused turnover AND a ground ball).
+  if (metric === 'INT') {
+    state.activeGame.events.push(playerEvent(player, 'CTO', now), playerEvent(player, 'GB', now));
+  } else if (metric === 'Goal') {
     state.activeGame.homeScore++;
     document.getElementById('homeScore').textContent = state.activeGame.homeScore;
     // EMO (A1) success for a Tigers goal is decided in resolveGoalAgainstPenalties(),
@@ -610,7 +615,7 @@ function logStat(metric, playerArg, opts) {
     state.activeGame.events.push(opponentEvent('Opp_SOG', now), opponentEvent('Opp_Shot', now));
   }
 
-  // Goal/SOG/Save rows recorded together are one group, so Undo removes them together.
+  // Goal/SOG/Save/INT rows recorded together are one group, so Undo removes them together.
   tagEventGroup(zoneStartIndex);
   saveState();
 
@@ -621,7 +626,7 @@ function logStat(metric, playerArg, opts) {
 
   closeStatModal();
   renderEventLog();
-  showToast((SF_LABELS[metric] || metric) + ' #' + scorerJersey, 'success');
+  showToast((SF_LABELS[metric] || metric) + ' #' + scorerJersey + (metric === 'INT' ? ' (+ caused turnover, ground ball)' : ''), 'success');
 
   // Stat-first Goal: everything was collected up front (scorer, assist,
   // clock, zone), so stamp it all now instead of prompting.
