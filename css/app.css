@@ -1117,50 +1117,6 @@ body {
   flex-wrap: wrap;
 }
 
-/* ---------- Printable scoresheet (V3.26) ---------- */
-#scoresheetOverlay { display: none; position: fixed; inset: 0; z-index: 3000; background: #fff; overflow: auto; color: #000; }
-#scoresheetOverlay.show { display: block; }
-#scoresheetOverlay .ss-toolbar { position: sticky; top: 0; display: flex; gap: 8px; justify-content: flex-end; padding: 8px; background: #f2f2f2; border-bottom: 1px solid #ccc; }
-#scoresheetOverlay .ss-toolbar button { padding: 10px 16px; border: none; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
-#scoresheetOverlay .ss-print { background: #1a73e8; color: #fff; }
-#scoresheetOverlay .ss-close { background: #555; color: #fff; }
-#scoresheetOverlay .ss-tip { margin-right: auto; align-self: center; font-size: 0.75rem; color: #444; }
-#scoresheetBody { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; color: #000; padding: 10px; min-width: 980px; }
-#scoresheetBody .title-bar { background: #000; color: #fff; font-weight: bold; padding: 4px; text-align: center; font-size: 11pt; letter-spacing: 1px; }
-#scoresheetBody .meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 8pt; font-weight: bold; border-bottom: 1.5px solid #000; padding: 3px 2px; margin-bottom: 4px; }
-#scoresheetBody .cols { display: flex; gap: 6px; align-items: flex-start; }
-#scoresheetBody .c-left { flex: 2.0; } #scoresheetBody .c-mid { flex: 1.2; } #scoresheetBody .c-right { flex: 0.9; }
-#scoresheetBody .box-t, #scoresheetBody .section-title { background: #000; color: #fff; font-weight: bold; font-size: 8pt; padding: 2px 5px; text-align: center; margin-top: 5px; }
-#scoresheetBody .section-title.left { text-align: left; }
-#scoresheetBody table { width: 100%; border-collapse: collapse; }
-#scoresheetBody th, #scoresheetBody td { border: 1px solid #000; padding: 1px 3px; text-align: center; font-size: 7pt; color: #000; background: #fff; }
-#scoresheetBody th { background: #e6e6e6; font-weight: bold; }
-#scoresheetBody .left { text-align: left; }
-#scoresheetBody table.roster td.pos { writing-mode: vertical-rl; transform: rotate(180deg); background: #f2f2f2; font-weight: bold; width: 14px; letter-spacing: 1px; }
-#scoresheetBody table.roster td.num, #scoresheetBody table.roster th.num { width: 22px; }
-#scoresheetBody table.roster td.nm { width: 40%; }
-#scoresheetBody .box { margin-bottom: 3px; }
-#scoresheetBody .box table.qt td.qh { background: #f2f2f2; font-weight: bold; width: 30px; }
-#scoresheetBody .box table.qt tr.tot td { background: #eee; }
-#scoresheetBody .box table.qt tr.pct td { background: #e2e2e2; }
-#scoresheetBody .tl { display: grid; grid-template-columns: repeat(14, 1fr); border: 1px solid #000; }
-#scoresheetBody .tl-cell { border: 1px solid #000; min-height: 26px; text-align: center; }
-#scoresheetBody .tl-n { background: #e6e6e6; font-weight: bold; font-size: 6.5pt; border-bottom: 1px solid #000; }
-#scoresheetBody .tl-v { font-size: 6.5pt; padding: 1px; } #scoresheetBody .tl-v span { color: #444; }
-#scoresheetBody .final td.fin { background: #dbe5f1; }
-#scoresheetBody .footer { display: flex; gap: 14px; border: 1.5px solid #000; margin-top: 6px; padding: 3px 5px; font-size: 8pt; font-weight: bold; }
-.ghi-exports { display: flex; gap: 6px; margin-top: 6px; }
-.ghi-exports button { padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--white); cursor: pointer; }
-@media print {
-  @page { size: letter landscape; margin: 0.3in; }
-  body.printing-scoresheet > *:not(#scoresheetOverlay) { display: none !important; }
-  body.printing-scoresheet { background: #fff !important; }
-  #scoresheetOverlay { position: static; overflow: visible; }
-  #scoresheetOverlay .ss-toolbar { display: none; }
-  #scoresheetBody { padding: 0; min-width: 0; }
-  #scoresheetBody * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}
-
 /* Test mode (V3.33): orange bar + tag so a TEST game is never mistaken for a real one */
 .test-banner { display: none; position: sticky; top: 0; z-index: 2000; background: #fd7e14; color: #fff;
   font-weight: 800; text-align: center; padding: 6px 8px; font-size: 0.85rem; letter-spacing: .3px; }
@@ -1199,6 +1155,10 @@ body {
 .picker-divider { grid-column: 1 / -1; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: .4px; margin-top: 6px; }
 .penalty-player-item.no-jersey { font-weight: 500; color: var(--text-secondary); }
+
+/* History: MaxPreps file / Save game file / Discard buttons */
+.ghi-exports { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.ghi-exports button { padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--white); cursor: pointer; }
 
 /* Discard button for TEST games in History (V3.37) */
 .ghi-exports button.discard-test { border-color: #fd7e14; color: #fd7e14; }

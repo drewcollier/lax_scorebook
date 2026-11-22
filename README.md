@@ -12,7 +12,8 @@ collects every game and builds season stats.
 - **How it fits together:** the app records every play on the device, then sends
   the finished game to the Apps Script (with the Stats PIN), which writes it to
   the workbook and rebuilds Game Log, Season Totals and MaxPreps Export.
-  Scoresheets and per-game MaxPreps files are made right in the app.
+  Per-game MaxPreps files are made right in the app; the printable scoresheet
+  comes from the Sheet (Lacrosse Tools -> Generate Printable Scoresheet).
 
 ## Updating the Apps Script (Code.gs) without changing the link
 
@@ -75,7 +76,7 @@ device only.
 | File | What's in it |
 |---|---|
 | `index.html` | The scorebook's screens and pop-ups (markup only) |
-| `css/app.css` | All scorebook styles, including the printable scoresheet |
+| `css/app.css` | All scorebook styles |
 | `js/config.js` | The built-in script link (shared with the viewer), the TEST copy's link and the sign-up form link |
 | `js/boot.js` | Offline support start-up, "new version" bar, storage protection |
 | `js/state.js` | App state, saving it on the device, helpers, tab switching |
@@ -88,7 +89,7 @@ device only.
 | `js/roster.js` | Roster screen and pulling roster/officials |
 | `js/sync.js` | The PIN and sending games to the workbook |
 | `js/settings.js` | Settings screen, Test Connection |
-| `js/exports.js` | Printable scoresheet, MaxPreps file |
+| `js/exports.js` | MaxPreps file |
 | `js/history.js` | History screen, Reset All Local Data |
 | `js/main.js` | Start-up (loaded last) |
 | `viewer.html`, `css/viewer.css`, `js/viewer.js` | The stats viewer |
@@ -237,13 +238,15 @@ Opponent numbers are only what the scorekeeper records about them: goals,
 shots, shots on goal, faceoffs (our losses) and penalties. Everything is worked
 out from the recorded plays, so it always matches the Events tab.
 
-## Scoresheet and MaxPreps file in the app
+## Scoresheet (in the Sheet) and MaxPreps file (in the app)
 
-History -> **Scoresheet** builds the one-page landscape scoresheet on the device
-(print or Save as PDF; it scales itself to fit one page). History ->
-**MaxPreps file** downloads that game's stats as a CSV in MaxPreps' column
-order. Both work offline. The Sheet's own *Lacrosse Tools -> Generate Printable
-Scoresheet* still works too.
+The **printable scoresheet** is made only in the Sheet: pick the game on the
+**Scoresheet Template** tab (B2), then **Lacrosse Tools -> Generate Printable
+Scoresheet -> Print / Save PDF**. It shrinks itself to one landscape page. (The
+app had its own copy until V3.38; it was removed so there's one to maintain.)
+
+History -> **MaxPreps file** in the app downloads that game's stats as a CSV in
+MaxPreps' column order; it works offline.
 
 ## Releasing a new version of the app
 
