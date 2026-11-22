@@ -1199,3 +1199,6 @@ body {
 .picker-divider { grid-column: 1 / -1; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: .4px; margin-top: 6px; }
 .penalty-player-item.no-jersey { font-weight: 500; color: var(--text-secondary); }
+
+/* Discard button for TEST games in History (V3.37) */
+.ghi-exports button.discard-test { border-color: #fd7e14; color: #fd7e14; }

@@ -196,6 +196,11 @@ workbook. The app checks with the script before sending and refuses (keeping the
 game on the device) if a link points at the wrong workbook. **Test Connection**
 says which workbook a link reaches.
 
+Turning Test mode off doesn't change a TEST game that's already going: the
+orange bar says "TEST GAME in progress" until you tap **END GAME**. To throw a
+TEST game away, end it (Cancel at the PIN is fine), then tap **Discard** on it in
+History. Only TEST games have a Discard button.
+
 In the TEST copy, **Lacrosse Tools -> Clear all games (TEST copy only)** empties it.
 
 ## Penalties tab (foul-out tracking)

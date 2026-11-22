@@ -12,7 +12,7 @@ function applyTestMode() {
   var bar = document.getElementById('testBanner');
   if (bar) {
     bar.classList.toggle('show', on || testGame);
-    bar.textContent = testGame ? 'TEST GAME - this game goes to the TEST workbook'
+    bar.textContent = testGame ? 'TEST GAME in progress - tap END GAME on the Game tab to finish it. It only goes to the TEST workbook.'
       : 'TEST MODE - new games go to the TEST workbook';
   }
   document.body.classList.toggle('test-mode', on || testGame);
@@ -28,7 +28,11 @@ function setTestMode(on) {
   scriptInfoCache = {};
   saveState();
   applyTestMode();
-  showToast(on ? 'Test mode ON: new games go to the TEST workbook.' : 'Test mode off: new games go to the team workbook.', on ? 'warning' : 'success');
+  if (!on && state.activeGame && state.activeGame.isTest) {
+    showToast('Test mode is off for new games. The TEST game in progress stays a TEST game until you end it (Game tab > END GAME).', 'warning');
+  } else {
+    showToast(on ? 'Test mode ON: new games go to the TEST workbook.' : 'Test mode off: new games go to the team workbook.', on ? 'warning' : 'success');
+  }
 }
 
 function saveTestUrl() {
