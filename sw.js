@@ -6,7 +6,7 @@
 // - Bump CACHE_VERSION on every release: devices then download the whole new
 //   version at once and the app shows a "new version ready - Reload" bar.
 // - Requests to other sites (the Google Apps Script) are never touched.
-const CACHE_VERSION = 'lax-scorebook-v38';
+const CACHE_VERSION = 'lax-scorebook-v39';
 const ASSETS = [
   './', './index.html', './viewer.html',
   './coach.html', './manifest.json', './logo.png',

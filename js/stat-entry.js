@@ -63,11 +63,11 @@ function createPlayerCard(player, isStarter) {
 
 function getFilteredPlayers() {
   var filter = state.currentFilter;
-  return state.players.filter(function(p) {
+  return playersByJersey(state.players.filter(function(p) {
     if (filter === 'All') return true;
     if (filter === 'Starters') return p.isStarter;
     return p.Position === filter;
-  });
+  }));
 }
 
 function setFilter(f) {
@@ -235,11 +235,7 @@ function sfRenderGrid() {
     if (SF_GOALIE_ONLY[sfState.metric]) return p.Position === 'Goalie';
     return true;
   });
-  list.sort(function(a, b) {
-    var na = parseInt(a.Jersey, 10), nb = parseInt(b.Jersey, 10);
-    if (na !== nb) return (isNaN(na) ? 999 : na) - (isNaN(nb) ? 999 : nb);
-    return String(a.Jersey).length - String(b.Jersey).length; // #0 before #00
-  });
+  list.sort(compareJersey);
   if (!list.length) {
     var empty = document.createElement('div');
     empty.className = 'sf-grid-empty';
@@ -252,7 +248,7 @@ function sfRenderGrid() {
     item.className = 'sf-grid-item';
     var j = document.createElement('div');
     j.className = 'sf-grid-jersey';
-    j.textContent = '#' + p.Jersey;
+    j.textContent = jerseyText(p) ? '#' + jerseyText(p) : 'No #';
     var n = document.createElement('div');
     n.className = 'sf-grid-name';
     n.textContent = p.Name || '';

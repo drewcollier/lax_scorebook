@@ -221,16 +221,10 @@ function assistAnswer(hadAssist) {
   }
   // Yes — show the jersey list (everyone except the scorer).
   var list = document.getElementById('assistPlayerList');
-  list.innerHTML = '';
-  state.players.forEach(function(p) {
-    if (state.ejectedPlayers.indexOf(p.Player_ID) !== -1) return;
-    if (p.Player_ID === state.assistScorerId) return; // can't assist yourself
-    var item = document.createElement('div');
-    item.className = 'penalty-player-item';
-    item.textContent = '#' + p.Jersey;
-    item.addEventListener('click', function() { assistSelectPlayer(p); });
-    list.appendChild(item);
-  });
+  fillJerseyList(list, state.players.filter(function(p) {
+    return state.ejectedPlayers.indexOf(p.Player_ID) === -1 &&
+      p.Player_ID !== state.assistScorerId; // can't assist yourself
+  }), assistSelectPlayer);
   document.getElementById('assistStepQuestion').style.display = 'none';
   document.getElementById('assistStepPlayer').style.display = 'block';
 }
@@ -482,18 +476,12 @@ function logOpponentPenalty(isInHome, durationSeconds) {
 
 function renderPenaltyPlayerList() {
   var list = document.getElementById('penaltyPlayerList');
-  list.innerHTML = '';
-  state.players.forEach(function(p) {
-    if (state.ejectedPlayers.indexOf(p.Player_ID) !== -1) return;
-    var item = document.createElement('div');
-    item.className = 'penalty-player-item';
-    item.textContent = p.Jersey;
-    item.addEventListener('click', function() {
-      state.selectedPenaltyPlayer = p;
-      state.penaltyInHome = false;
-      penaltyPlayerChosen();
-    });
-    list.appendChild(item);
+  fillJerseyList(list, state.players.filter(function(p) {
+    return state.ejectedPlayers.indexOf(p.Player_ID) === -1;
+  }), function(p) {
+    state.selectedPenaltyPlayer = p;
+    state.penaltyInHome = false;
+    penaltyPlayerChosen();
   });
 }
 
@@ -663,11 +651,11 @@ function closeEjectAlert() {
 function openEjectionModal() {
   var list = document.getElementById('ejectionPlayerList');
   list.innerHTML = '';
-  state.players.forEach(function(p) {
+  playersByJersey().forEach(function(p) {
     if (state.ejectedPlayers.indexOf(p.Player_ID) !== -1) return;
     var item = document.createElement('div');
     item.className = 'ejection-player-item';
-    item.textContent = '#' + p.Jersey + ' ' + p.Name;
+    item.textContent = (jerseyText(p) ? '#' + jerseyText(p) + ' ' : '(no #) ') + p.Name;
     item.addEventListener('click', function() {
       if (confirm('Eject #' + p.Jersey + ' ' + p.Name + '?')) {
         ejectPlayer(p.Player_ID, false);

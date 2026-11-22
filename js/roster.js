@@ -13,7 +13,7 @@ function renderRoster() {
     // In-Home player sorts to the very top; everyone else by jersey number.
     if (a.isInHome && !b.isInHome) return -1;
     if (b.isInHome && !a.isInHome) return 1;
-    return parseInt(a.Jersey) - parseInt(b.Jersey);
+    return compareJersey(a, b);
   });
 
   sorted.forEach(function(p) {
