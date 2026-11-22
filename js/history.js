@@ -68,6 +68,21 @@ function renderHistory() {
       item.querySelector('.ghi-info').appendChild(ex);
     }
 
+    // TEST games can be thrown away (real games never get this button).
+    if (g.isTest) {
+      var row = item.querySelector('.ghi-exports');
+      if (!row) {
+        row = document.createElement('div');
+        row.className = 'ghi-exports';
+        item.querySelector('.ghi-info').appendChild(row);
+      }
+      var bd = document.createElement('button');
+      bd.textContent = 'Discard';
+      bd.className = 'discard-test';
+      bd.addEventListener('click', function() { discardTestGame(g.id); });
+      row.appendChild(bd);
+    }
+
     var btn = item.querySelector('.push-game-btn');
     if (btn) {
       btn.addEventListener('click', function() {
@@ -76,6 +91,24 @@ function renderHistory() {
     }
     list.appendChild(item);
   });
+}
+
+// Removes a TEST game from this device's History. Only TEST games: a real game
+// can't be discarded this way. Anything already sent to the TEST workbook stays
+// there (Lacrosse Tools > Clear all games in the TEST copy empties it).
+function discardTestGame(gameId) {
+  var idx = -1;
+  for (var i = 0; i < state.gameHistory.length; i++) if (state.gameHistory[i].id === gameId) idx = i;
+  if (idx < 0) return;
+  var g = state.gameHistory[idx];
+  if (!g.isTest) return;
+  if (syncInFlight[gameId]) { showToast('This game is being saved right now. Try again in a moment.', 'warning'); return; }
+  if (!confirm('Discard the TEST game vs ' + g.opponent + ' from this device?' +
+      (g.synced ? '\n\n(It stays in the TEST workbook; nothing changes in the team workbook.)' : '\n\n(It was never sent anywhere.)'))) return;
+  state.gameHistory.splice(idx, 1);
+  saveState();
+  renderHistory();
+  showToast('TEST game discarded', 'info');
 }
 
 function clearHistory() {
