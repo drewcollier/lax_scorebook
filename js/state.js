@@ -153,3 +153,53 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
     if (tab === 'game') renderGameUI();
   });
 });
+
+// ---- Jersey order (V3.36) ----
+// Every player picker lists players by jersey number: 0 before 00, then 1, 2,
+// 3 ... Players with no jersey number in the roster go last (by name), so a
+// missing number never leaves a blank button in the middle of the list.
+function jerseyText(p) {
+  return String(p && p.Jersey !== undefined && p.Jersey !== null ? p.Jersey : '').trim();
+}
+function compareJersey(a, b) {
+  var ja = jerseyText(a), jb = jerseyText(b);
+  if (!ja || !jb) {
+    if (ja) return -1;
+    if (jb) return 1;
+    return String(a.Name || '').localeCompare(String(b.Name || ''));
+  }
+  var na = parseInt(ja, 10), nb = parseInt(jb, 10);
+  if (isNaN(na) || isNaN(nb)) {
+    if (!isNaN(na)) return -1;
+    if (!isNaN(nb)) return 1;
+    return ja.localeCompare(jb);
+  }
+  if (na !== nb) return na - nb;
+  return ja.length - jb.length; // #0 before #00
+}
+function playersByJersey(list) {
+  return (list || state.players).slice().sort(compareJersey);
+}
+
+// Fills a jersey-button list (penalty / assist pickers). Players with no
+// jersey number come after a small heading and show their name instead, so
+// they can still be picked if the roster is just missing their number.
+function fillJerseyList(listEl, players, onPick) {
+  listEl.innerHTML = '';
+  var headed = false;
+  playersByJersey(players).forEach(function(p) {
+    var j = jerseyText(p);
+    if (!j && !headed) {
+      var h = document.createElement('div');
+      h.className = 'picker-divider';
+      h.textContent = 'No jersey number in the roster';
+      listEl.appendChild(h);
+      headed = true;
+    }
+    var item = document.createElement('div');
+    item.className = 'penalty-player-item' + (j ? '' : ' no-jersey');
+    item.textContent = j ? '#' + j : (p.Name || '(no name)');
+    item.addEventListener('click', function() { onPick(p); });
+    listEl.appendChild(item);
+  });
+}

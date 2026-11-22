@@ -1194,3 +1194,8 @@ body {
 .fd-status.out { background: #dc3545; color: #fff; }
 .fd-sum { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; }
 .fd-nr { background: #6c757d; color: #fff; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; }
+
+/* Jersey pickers (V3.36): players with no jersey number go last, under a heading */
+.picker-divider { grid-column: 1 / -1; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: .4px; margin-top: 6px; }
+.penalty-player-item.no-jersey { font-weight: 500; color: var(--text-secondary); }
