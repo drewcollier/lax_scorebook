@@ -111,7 +111,8 @@ That's it. The stat shows up in the Event Log at the bottom of the screen.
 
 | Stat | What happens after you enter the jersey |
 |---|---|
-| Ground Ball, Turnover, Caused Turnover, Interception | Recorded right away |
+| Ground Ball, Turnover, Caused Turnover | Recorded right away |
+| Interception | Recorded right away. Also counts a caused turnover and a ground ball for that player, so don't add those separately |
 | Face Off Won, Face Off Lost | Recorded right away |
 | Save | Recorded right away (goalies only) |
 | Goal Allowed | Asks for the time on the clock (goalies only) |
