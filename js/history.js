@@ -1,4 +1,4 @@
-// js/history.js - History screen (sync status, Scoresheet / MaxPreps buttons) and Reset All Local Data.
+// js/history.js - History screen (sync status, MaxPreps / game file buttons) and Reset All Local Data.
 // Part of the Fishers Tigers Lacrosse Scorebook (index.html loads these in order).
 
 // ============================================================
@@ -49,20 +49,17 @@ function renderHistory() {
       item.querySelector('.ghi-info').appendChild(why);
     }
 
-    // Scoresheet + MaxPreps file (built on this device; no PIN or signal needed).
+    // MaxPreps file + game file (built on this device; no PIN or signal needed).
+    // The printable scoresheet is in the Sheet (Lacrosse Tools).
     if (hasEvents) {
       var ex = document.createElement('div');
       ex.className = 'ghi-exports';
-      var b1 = document.createElement('button');
-      b1.textContent = 'Scoresheet';
-      b1.addEventListener('click', function() { openScoresheet(g.id); });
       var b2 = document.createElement('button');
       b2.textContent = 'MaxPreps file';
       b2.addEventListener('click', function() { downloadMaxPrepsCsv(g.id); });
       var b3 = document.createElement('button');
       b3.textContent = 'Save game file';
       b3.addEventListener('click', function() { downloadGameFile(g.id); });
-      ex.appendChild(b1);
       ex.appendChild(b2);
       ex.appendChild(b3);
       item.querySelector('.ghi-info').appendChild(ex);
