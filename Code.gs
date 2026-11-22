@@ -42,8 +42,10 @@ function isTest_() { return PropertiesService.getScriptProperties().getProperty(
  *   7 = view-only coach PINs (VIEW_PINS) + lockout after too many wrong PINs
  *   8 = TEST copy support, a backup file in Drive for every saved game,
  *       Lacrosse Tools > Restore a game / Restore a season
+ *   9 = printable scoresheet matches the app's: Clears / Rides box, % lines,
+ *       SV%; start time and weather print correctly
  */
-var SCRIPT_VERSION = 8;
+var SCRIPT_VERSION = 9;
 
 /**
  * The scorekeeper PIN.
@@ -950,9 +952,13 @@ function generateScoresheetPDF() {
   var scorer      = gameRecord[12] || '';
   var timer       = gameRecord[13] || '';
   var oppScorer   = gameRecord[14] || '';
-  var weather = [weatherTemp ? weatherTemp + '\u00B0F' : '', weatherCond].filter(function(x){return x;}).join(' ');
+  // The app already sends the temperature with its unit ("60°F"); only add one to a bare number.
+  var tempText = String(weatherTemp).trim();
+  if (tempText && /^-?\d+(\.\d+)?$/.test(tempText)) tempText += '\u00B0F';
+  var weather = [tempText, weatherCond].filter(function(x){return x;}).join(' ');
 
   var eventsData = eventsSheet.getDataRange().getValues();
+  gameStart = formatClock(gameStart); // a start time Sheets stored as a time ("11:00", not "Sat Dec 30 1899 ...")
 
   // Player map.
   var playersData = playersSheet.getDataRange().getValues();
@@ -994,11 +1000,12 @@ function generateScoresheetPDF() {
   // Per-player stats + per-quarter team boxes, single pass.
   var stat = {}; // pid -> stat obj
   function ensure(pid) {
-    if (!stat[pid]) stat[pid] = { shots:0,sog:0,goals:0,assists:0,gbs:0,saves:0,savesQ:zeroQ() };
+    if (!stat[pid]) stat[pid] = { shots:0,sog:0,goals:0,assists:0,gbs:0,saves:0,ga:0,savesQ:zeroQ() };
     return stat[pid];
   }
   var gbQ = zeroQ(), shotQ = zeroQ(), clearGoodQ = zeroQ(), clearFailQ = zeroQ();
   var emoScoredQ = zeroQ(), emoFailQ = zeroQ(), fowQ = zeroQ(), folQ = zeroQ();
+  var rideGoodQ = zeroQ(), rideFailQ = zeroQ();
   var tigersGoalQ = zeroQ(), oppGoalQ = zeroQ();
   var goals = [], penalties = [], timeouts = { h1:0, h2:0, ot1:0, ot2:0 };
 
@@ -1023,6 +1030,9 @@ function generateScoresheetPDF() {
     else if (action === 'Save') { var s = ensure(prim); s.saves++; if (inQ) s.savesQ[per]++; }
     else if (action === 'Clear_Good') { if (inQ) clearGoodQ[per]++; }
     else if (action === 'Clear_Fail') { if (inQ) clearFailQ[per]++; }
+    else if (action === 'Ride_Good') { if (inQ) rideGoodQ[per]++; }
+    else if (action === 'Ride_Fail') { if (inQ) rideFailQ[per]++; }
+    else if (action === 'GA') { ensure(prim).ga++; }
     else if (action === 'FOW') { if (inQ) fowQ[per]++; }
     else if (action === 'FOL') { if (inQ) folQ[per]++; }
     else if (action === 'EMO_Success') { if (inQ) emoScoredQ[per]++; }
@@ -1131,32 +1141,35 @@ function generateScoresheetPDF() {
       any = true;
       rows += '<tr><td><b>' + esc(playerMap[pid3].jersey) + '</b></td>'
         + '<td>' + q.Q1 + '</td><td>' + q.Q2 + '</td><td>' + q.Q3 + '</td><td>' + q.Q4 + '</td>'
-        + '<td>' + q.OT1 + '</td><td>' + q.OT2 + '</td><td><b>' + tot + '</b></td></tr>';
+        + '<td>' + q.OT1 + '</td><td>' + q.OT2 + '</td><td><b>' + tot + '</b></td>'
+        + '<td><b>' + pct(tot, tot + stat[pid3].ga) + '</b></td></tr>';
     }
-    if (!any) rows = '<tr><td colspan="8">&nbsp;</td></tr>';
+    if (!any) rows = '<tr><td colspan="9">&nbsp;</td></tr>';
     return '<table class="saves"><thead><tr><th>#</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th>'
-      + '<th>OT1</th><th>OT2</th><th>TOT</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      + '<th>OT1</th><th>OT2</th><th>TOT</th><th>SV%</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  // Generic per-quarter 2-value box (e.g. Cleared/Failed, Scored/Failed, Won/Lost).
-  function qBox2(title, c1, c2, qa, qb) {
+  // "XX.X%" (or a dash when nothing was attempted). Same as the app's scoresheet.
+  function pct(made, tries) { return tries > 0 ? (Math.round(made / tries * 1000) / 10).toFixed(1) + '%' : '&ndash;'; }
+
+  // A quarter-by-quarter box, the same as the app's scoresheet.
+  // groups (optional): [[label, columns spanned], ...] for a second header row
+  // (Clears | Rides). pcts (optional): [[text, columns spanned], ...] for the
+  // percentage line under TOT.
+  function qBox(title, cols, series, pcts, groups) {
+    var head = '';
+    if (groups) head += '<tr><th></th>' + groups.map(function(x){ return '<th colspan="' + x[1] + '">' + x[0] + '</th>'; }).join('') + '</tr>';
+    if (cols.length) head += '<tr><th></th>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr>';
+    if (head) head = '<thead>' + head + '</thead>';
     var body = '';
     PERIODS.forEach(function(per){
-      body += '<tr><td class="qh">' + per + '</td><td>' + qa[per] + '</td><td>' + qb[per] + '</td></tr>';
+      body += '<tr><td class="qh">' + per + '</td>' + series.map(function(o){ return '<td>' + o[per] + '</td>'; }).join('') + '</tr>';
     });
-    body += '<tr class="tot"><td class="qh">TOT</td><td><b>' + sumQ(qa) + '</b></td><td><b>' + sumQ(qb) + '</b></td></tr>';
-    return '<div class="box"><div class="box-t">' + title + '</div><table class="qt">'
-      + '<thead><tr><th></th><th>' + c1 + '</th><th>' + c2 + '</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+    body += '<tr class="tot"><td class="qh">TOT</td>' + series.map(function(o){ return '<td><b>' + sumQ(o) + '</b></td>'; }).join('') + '</tr>';
+    if (pcts) body += '<tr class="pct"><td class="qh">%</td>' + pcts.map(function(x){ return '<td colspan="' + x[1] + '"><b>' + x[0] + '</b></td>'; }).join('') + '</tr>';
+    return '<div class="box"><div class="box-t">' + title + '</div><table class="qt">' + head + '<tbody>' + body + '</tbody></table></div>';
   }
-
-  // Single-value per-quarter box (Groundballs, Shots).
-  function qBox1(title, qa) {
-    var body = '';
-    PERIODS.forEach(function(per){ body += '<tr><td class="qh">' + per + '</td><td>' + qa[per] + '</td></tr>'; });
-    body += '<tr class="tot"><td class="qh">TOT</td><td><b>' + sumQ(qa) + '</b></td></tr>';
-    return '<div class="box"><div class="box-t">' + title + '</div><table class="qt">'
-      + '<tbody>' + body + '</tbody></table></div>';
-  }
+  function pct2(a, b) { return [[pct(sumQ(a), sumQ(a) + sumQ(b)), 2]]; }
 
   // Scoring timeline (27 cells, wraps in CSS grid).
   var timelineCells = '';
@@ -1211,6 +1224,7 @@ function generateScoresheetPDF() {
     + '.saves td, .saves th { font-size:6.5pt; padding:1px 2px; }'
     + '.box { margin-bottom:3px; } .box table.qt td.qh { background:#f2f2f2; font-weight:bold; width:30px; }'
     + '.box table.qt tr.tot td { background:#eee; }'
+    + '.box table.qt tr.pct td { background:#e2e2e2; }'
     + '.tl { display:grid; grid-template-columns:repeat(14,1fr); gap:0; border:1px solid #000; }'
     + '.tl-cell { border:1px solid #000; min-height:26px; }'
     + '.tl-n { background:#e6e6e6; font-weight:bold; font-size:6.5pt; border-bottom:1px solid #000; }'
@@ -1218,7 +1232,17 @@ function generateScoresheetPDF() {
     + '.final td.fin { background:#dbe5f1; } .final td.left { text-align:left; }'
     + '.footer { display:flex; gap:14px; border:1.5px solid #000; margin-top:6px; padding:3px 5px; font-size:8pt; font-weight:bold; }'
     + '@media print { .no-print { display:none; } }'
-    + '</style></head><body>'
+    + '</style>'
+    // Shrink the sheet to fit one landscape page when printing (a full roster
+    // is taller than one page), the same way the app's scoresheet does.
+    + '<script>'
+    +   'function fitSheet(){var s=document.getElementById("sheet");if(!s)return;s.style.zoom="";'
+    +     'var z=Math.min(1,990/s.scrollWidth,740/s.scrollHeight);s.style.zoom=String(Math.floor(z*100)/100);}'
+    +   'function unfitSheet(){var s=document.getElementById("sheet");if(s)s.style.zoom="";}'
+    +   'function printSheet(){fitSheet();window.print();}'
+    +   'window.addEventListener("beforeprint",fitSheet);window.addEventListener("afterprint",unfitSheet);'
+    + '</script>'
+    + '</head><body><div id="sheet">'
     + '<div class="title-bar">FISHERS TIGERS LACROSSE &mdash; OFFICIAL GAME SCORESHEET</div>'
     + '<div class="us">US</div>'
     + '<div class="meta">'
@@ -1265,11 +1289,12 @@ function generateScoresheetPDF() {
     +   '</div>'
     // RIGHT: per-quarter stat boxes.
     +   '<div class="c-right">'
-    +     qBox1('GROUNDBALLS', gbQ)
-    +     qBox1('SHOTS', shotQ)
-    +     qBox2('CLEARS', 'Clrd', 'Fail', clearGoodQ, clearFailQ)
-    +     qBox2('EXTRA MAN', 'Scrd', 'Fail', emoScoredQ, emoFailQ)
-    +     qBox2('FACEOFFS', 'Won', 'Lost', fowQ, folQ)
+    +     qBox('GROUNDBALLS', [], [gbQ])
+    +     qBox('SHOTS', [], [shotQ], [[pct(tigersGoals, sumQ(shotQ)) + ' scored', 1]])
+    +     qBox('CLEARS / RIDES', ['Clears', 'Fail', 'Ride', 'Fail'], [clearGoodQ, clearFailQ, rideGoodQ, rideFailQ],
+            pct2(clearGoodQ, clearFailQ).concat(pct2(rideGoodQ, rideFailQ)), [['Clears', 2], ['Rides', 2]])
+    +     qBox('EXTRA MAN', ['Scrd', 'Fail'], [emoScoredQ, emoFailQ], pct2(emoScoredQ, emoFailQ))
+    +     qBox('FACEOFFS', ['Won', 'Lost'], [fowQ, folQ], pct2(fowQ, folQ))
     +   '</div>'
     + '</div>'
 
@@ -1278,9 +1303,10 @@ function generateScoresheetPDF() {
     +   '<div>Weather: ' + esc(weather) + '</div><div>Game Start: ' + esc(gameStart) + '</div>'
     +   '<div>Scorer: ' + esc(scorer) + '</div><div>Timer: ' + esc(timer) + '</div>'
     + '</div>'
+    + '</div>' // #sheet
 
     + '<div class="no-print" style="position:fixed; top:8px; right:8px; background:#fff; padding:6px; box-shadow:0 2px 6px rgba(0,0,0,0.3); border-radius:4px; z-index:1000;">'
-    +   '<button onclick="window.print()" style="padding:8px 16px; background:#1a73e8; color:#fff; border:none; border-radius:4px; font-size:9.5pt; cursor:pointer; font-weight:bold;">Print / Save PDF</button>'
+    +   '<button onclick="printSheet()" style="padding:8px 16px; background:#1a73e8; color:#fff; border:none; border-radius:4px; font-size:9.5pt; cursor:pointer; font-weight:bold;">Print / Save PDF</button>'
     + '</div>'
     + '</body></html>';
 
