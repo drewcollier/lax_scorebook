@@ -21,7 +21,7 @@ Last full rewrite: 2026-11-24 (after PR #29, app V3.39, script v9).
 
 ---
 ## 0. TL;DR state (2026-11-24)
-- App **V3.40** (Sun mode) live on GitHub Pages (PR #32 merged 11-24); Apps Script **SCRIPT_VERSION 9** deployed by owner. Latest PR: #33 (handoff only).
+- App **V3.40** (Sun mode) live on GitHub Pages (PR #32 merged 11-24); Apps Script **SCRIPT_VERSION 9** deployed by owner. Latest PR: #34 (handoff only).
 - 485 automated checks (21 suites) pass, in `tests/` (added by the PR that adds this file).
 - Season not started; one real game in the live workbook (exhibition vs North Central, 2026-11-21). Owner is testing over several games, then reports bugs.
 - Open backlog: §11.
@@ -203,7 +203,8 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 3. Girls rules support (part of team edition).
 4. Optional: build TEST link into config (`TEST_SCRIPT_URL`) if owner sends it; owner may enable "Automatically delete head branches"; owner may add an INT note to the Definitions tab.
 5. Sun mode (optional, only if owner asks after real outdoor games): bigger text in Sun, header shortcut (declined for now). Both looks stay.
-6. Watch-list from live games: owner is testing over several games and will report bugs/missed details.
+6. **Voice recording → opponent stats** (future idea, owner said not now; discussed 11-24, nothing built). A second person (not the tablet scorer) narrates **both teams** into a pocket recorder; the transcript (.txt, or timestamped .srt/.vtt) is imported **into the scorebook** (not a separate app) with a review screen before saving. Two modes: **Opponent only** (normal games: tablet stays primary and keeps the score and the Opp team buttons; import adds opponent stats by jersey; Tigers lines are only used to cross-check the tablet and flag count differences) and **Whole game** (backup when no tablet scorer: both teams, Tigers checked against roster; no live foul-out warnings or live viewer updates). Proposed phrasing: every line starts with the team word **"Tigers"** or **"Opponent"** (not the school name), then stat, then **"number"** + jersey, e.g. "Opponent goal number 22, assist number 5"; spoken quarter markers ("Start quarter 2"); "scratch that" deletes the last line; game clock not spoken. Start with a fixed-phrase parser in the app; an AI parser via Apps Script is a possible later fallback. Would need: opponent player stats storage in the Sheet (Apps Script change), import/review screen, opponent box score on the coaches' page, optional opponent roster to validate jerseys, one-page caller cheat sheet. Before building: (a) owner records a scrimmage with this phrasing and sends the transcript so the agent can hand-parse it and report the error rate; (b) coaches decide which opponent stats they want, by jersey or team totals only, and whether they'd supply opponent rosters.
+7. Watch-list from live games: owner is testing over several games and will report bugs/missed details.
 
 ## 12. How to start in a new session
 1. `git clone`/pull repo (attach via add_repo if needed), read this file + README.
@@ -217,3 +218,4 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 - 2026-11-24: living-document rules added at top; CLAUDE.md + AGENTS.md pointers (PR #31).
 - 2026-11-24: Sun mode (V3.40), theming notes in §8, owner's choices in §10, follow-up in §11 (PR #32).
 - 2026-11-24: PR #32 merged; owner keeps both Sun looks, prefers Sun: light (PR #33).
+- 2026-11-24: backlog item 6 added: voice recording → opponent stats idea (PR #34).
