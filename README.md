@@ -276,3 +276,11 @@ Node.js and Playwright (`npm install playwright`):
 4. `node tools/make_pdfs.js` - prints the guide and checklist to PDF
 
 The `tools/` folder is only for this; the app doesn't use it.
+
+## For AI agents / automated tests
+
+- **`AGENT_HANDOFF.md`** — full project state, history, workflow and backlog for an
+  agent picking up this work. Update it in every PR that changes behavior.
+- **`tests/`** — automated checks (mock Google Sheet + Apps Script, Playwright app tests).
+  Run `tests/run_all.sh` (needs node, python3, git, Playwright and Chrome; see the
+  handoff file §9). Not used by the app.
