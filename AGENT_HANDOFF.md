@@ -21,7 +21,7 @@ Last full rewrite: 2026-11-24 (after PR #29, app V3.39, script v9).
 
 ---
 ## 0. TL;DR state (2026-11-24)
-- App **V3.40** (Sun mode) in PR #32, pending owner merge (V3.39 live before that); Apps Script **SCRIPT_VERSION 9** deployed by owner. Latest PR: #32.
+- App **V3.40** (Sun mode) live on GitHub Pages (PR #32 merged 11-24); Apps Script **SCRIPT_VERSION 9** deployed by owner. Latest PR: #33 (handoff only).
 - 485 automated checks (21 suites) pass, in `tests/` (added by the PR that adds this file).
 - Season not started; one real game in the live workbook (exhibition vs North Central, 2026-11-21). Owner is testing over several games, then reports bugs.
 - Open backlog: §11.
@@ -192,7 +192,7 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 - Add a new suite per feature; add it to run_all.sh list.
 
 ## 10. Owner context for future decisions
-- Uses app at games on Android tablet or iPad; sun glare is a problem (plans a matte screen protector). Sun mode request (11-24): owner chose toggle in **Settings only** (not header), **scorebook only** (not coach/viewer pages), **always start dark** (don't save). Asked to see both looks, so V3.40 ships two (max contrast vs light) for him to pick after field testing; then remove the loser.
+- Uses app at games on Android tablet or iPad; sun glare is a problem (plans a matte screen protector). Sun mode request (11-24): owner chose toggle in **Settings only** (not header), **scorebook only** (not coach/viewer pages), **always start dark** (don't save). V3.40 ships two looks (max contrast + light). After trying them (11-24) he prefers **Sun: light** but wants **both kept**; do not remove either.
 - Uses app at games on Android tablet; scorekeeper hands tablet to coach to sync with PIN. Can't print at the field.
 - Coaches asked for the stats (coach page done) and a goal-face grid (backlog).
 - Families: ≤2 logins per player; emails collected via the form before the season (~3 months out from Nov 2026).
@@ -202,7 +202,7 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 2. **Team edition** for other schools (separate project/repo; Tigers app stays separate): export-only (finished game → CSV/PDF; optional preformatted MaxPreps file), no shared server, no responsibility for other schools' data; first-run setup (team name, colors, boys/girls rules, logo); identical CSV for all teams + column-mapping doc; Android first then Apple stores; free for under-resourced schools; owner will get a girls' scoresheet and has a scorekeeper to QA girls rules. Not started.
 3. Girls rules support (part of team edition).
 4. Optional: build TEST link into config (`TEST_SCRIPT_URL`) if owner sends it; owner may enable "Automatically delete head branches"; owner may add an INT note to the Definitions tab.
-5. **Sun mode follow-up:** owner tries both Sun looks outdoors and picks one → remove the other (CSS block + button + step14 checks). Possible tweaks after field test: bigger text in Sun, header shortcut (owner declined for now).
+5. Sun mode (optional, only if owner asks after real outdoor games): bigger text in Sun, header shortcut (declined for now). Both looks stay.
 6. Watch-list from live games: owner is testing over several games and will report bugs/missed details.
 
 ## 12. How to start in a new session
@@ -216,3 +216,4 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 - 2026-11-24: created (covers PRs #1–#29, app V3.39, script v9); tests/ added to repo (PR #30).
 - 2026-11-24: living-document rules added at top; CLAUDE.md + AGENTS.md pointers (PR #31).
 - 2026-11-24: Sun mode (V3.40), theming notes in §8, owner's choices in §10, follow-up in §11 (PR #32).
+- 2026-11-24: PR #32 merged; owner keeps both Sun looks, prefers Sun: light (PR #33).
