@@ -22,6 +22,18 @@
   --text-secondary: #b0b0b0;
   --border-color: #2a2a4a;
   --toast-bg: #333;
+  /* V3.40: colors that used to be hard-coded, so Sun mode can change them */
+  --on-accent: #ffffff;          /* text on solid red/green/orange buttons */
+  --alert-red: #dc3545;
+  --field-green: #0d3b1e;
+  --endgame-bg: #2a2a2a;
+  --endgame-border: #444;
+  --opp-goal-bg: #8b0000;
+  --opp-goal-border: #a00;
+  --muted-border: #666;
+  --muted-text: #999;
+  --line-strong: rgba(255,255,255,.15);
+  --line-soft: rgba(255,255,255,.08);
 }
 
 body {
@@ -108,7 +120,7 @@ body {
 }
 .btn-primary {
   background: var(--red);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .btn-primary:active {
   background: var(--red-dark);
@@ -124,14 +136,14 @@ body {
 }
 .btn-success {
   background: var(--green);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .btn-success:active {
   background: var(--green-dark);
 }
 .btn-danger {
-  background: #dc3545;
-  color: var(--white);
+  background: var(--alert-red);
+  color: var(--on-accent);
 }
 .btn-small {
   padding: 6px 10px;
@@ -225,7 +237,7 @@ body {
 .quarter-btn.active {
   background: var(--red);
   border-color: var(--red);
-  color: var(--white);
+  color: var(--on-accent);
 }
 
 /* STRENGTH BUTTONS (in quarter bar) */
@@ -244,23 +256,23 @@ body {
 .strength-btn.active-even {
   background: var(--green);
   border-color: var(--green);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .strength-btn.active-up {
   background: var(--green);
   border-color: var(--green);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .strength-btn.active-down {
   background: var(--red);
   border-color: var(--red);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .end-game-btn {
   padding: 6px 10px;
-  border: 2px solid #444;
+  border: 2px solid var(--endgame-border);
   border-radius: 6px;
-  background: #2a2a2a;
+  background: var(--endgame-bg);
   color: var(--gray-mid);
   font-weight: 700;
   font-size: 0.7rem;
@@ -268,8 +280,8 @@ body {
   transition: all 0.15s;
 }
 .end-game-btn:active {
-  background: #dc3545;
-  color: var(--white);
+  background: var(--alert-red);
+  color: var(--on-accent);
 }
 
 /* FILTER BAR */
@@ -293,7 +305,7 @@ body {
 .filter-btn.active {
   background: var(--red);
   border-color: var(--red);
-  color: var(--white);
+  color: var(--on-accent);
 }
 
 /* TEAM ACTIONS */
@@ -332,8 +344,8 @@ body {
   transform: scale(0.95);
 }
 .team-action-btn.opp-goal {
-  background: #8b0000;
-  border-color: #a00;
+  background: var(--opp-goal-bg);
+  border-color: var(--opp-goal-border);
 }
 
 /* PLAYER GRID */
@@ -383,7 +395,7 @@ body {
   left: 50%;
   transform: translate(-50%, -50%) rotate(-15deg);
   background: var(--red);
-  color: var(--white);
+  color: var(--on-accent);
   padding: 2px 8px;
   font-size: 0.65rem;
   font-weight: 800;
@@ -452,7 +464,7 @@ body {
 .zone-modal { position: relative; max-width: 575px; }
 .zone-svg-wrap {
   width: 100%;
-  background: #0d3b1e;
+  background: var(--field-green);
   border: 2px solid var(--white);
   border-radius: 8px;
   overflow: hidden;
@@ -460,15 +472,15 @@ body {
 #zoneSvg { display: block; width: 100%; height: auto; touch-action: manipulation; }
 #zoneSvg .zone {
   fill: rgba(255,255,255,0.04);
-  stroke: var(--white);
+  stroke: var(--on-accent);
   stroke-width: 1.5;
   cursor: pointer;
   transition: fill 0.08s ease;
 }
 #zoneSvg .zone:hover { fill: rgba(204,0,0,0.35); }
 #zoneSvg .zone:active, #zoneSvg .zone.picked { fill: var(--red); }
-#zoneSvg .goal-shape { fill: none; stroke: var(--white); stroke-width: 2; }
-#zoneSvg .crease { fill: rgba(255,255,255,0.12); stroke: var(--white); stroke-width: 2; }
+#zoneSvg .goal-shape { fill: none; stroke: var(--on-accent); stroke-width: 2; }
+#zoneSvg .crease { fill: rgba(255,255,255,0.12); stroke: var(--on-accent); stroke-width: 2; }
 
 /* SYNC STATUS CONTROL (v3) */
 .game-history-item {
@@ -564,7 +576,7 @@ body {
 }
 .event-item .undo-btn {
   background: var(--red-dark);
-  color: var(--white);
+  color: var(--on-accent);
   border: none;
   border-radius: 4px;
   padding: 3px 8px;
@@ -627,7 +639,7 @@ body {
 .roster-item .ih-toggle.active {
   background: var(--orange);
   border-color: var(--orange);
-  color: var(--white);
+  color: var(--on-accent);
 }
 .roster-item .ih-toggle:disabled {
   opacity: 0.35;
@@ -647,8 +659,8 @@ body {
 }
 .roster-item .remove-btn {
   background: transparent;
-  border: 1px solid #666;
-  color: #999;
+  border: 1px solid var(--muted-border);
+  color: var(--muted-text);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.7rem;
@@ -717,7 +729,7 @@ body {
 }
 .toast {
   background: var(--toast-bg);
-  color: var(--white);
+  color: var(--on-accent);
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 0.85rem;
@@ -727,7 +739,7 @@ body {
   text-align: center;
 }
 .toast.success { border-left: 4px solid var(--green); }
-.toast.error { border-left: 4px solid #dc3545; }
+.toast.error { border-left: 4px solid var(--alert-red); }
 .toast.warning { border-left: 4px solid var(--orange); }
 .toast.info { border-left: 4px solid #17a2b8; }
 
@@ -999,7 +1011,7 @@ body {
 }
 .pen-name-btn.technical:active { background: var(--orange); border-color: var(--orange); }
 .pen-name-btn.personal:active { background: var(--red); border-color: var(--red); }
-#penInHomeBtn.selected { background: var(--orange); border-color: var(--orange); color: var(--white); }
+#penInHomeBtn.selected { background: var(--orange); border-color: var(--orange); color: var(--on-accent); }
 
 /* GAME SETUP */
 .game-setup {
@@ -1130,24 +1142,24 @@ body {
 .pen-empty { font-size: 0.85rem; color: var(--text-secondary); padding: 6px 0 12px; }
 .pen-team h3 { font-size: 0.95rem; margin: 10px 0 6px; }
 .pen-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.pen-table th { font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-align: center; padding: 4px; border-bottom: 1px solid rgba(255,255,255,.15); }
-.pen-table td { text-align: center; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.pen-table th { font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-align: center; padding: 4px; border-bottom: 1px solid var(--line-strong); }
+.pen-table td { text-align: center; padding: 8px 4px; border-bottom: 1px solid var(--line-soft); }
 .pen-table .l { text-align: left; }
 .pen-row { cursor: pointer; }
 .pen-row.warn td { background: rgba(255, 193, 7, .18); }
 .pen-row.danger td { background: rgba(253, 126, 20, .30); }
 .pen-row.out td { background: rgba(220, 53, 69, .40); }
-.pen-out { background: #dc3545; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; }
+.pen-out { background: var(--alert-red); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; }
 .pen-inhome { font-size: 0.78rem; color: var(--text-secondary); margin: 6px 0 4px; }
 .foul-watch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; }
 .foul-watch .fw-title { font-size: 0.7rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; }
 .fw-chip { border: none; border-radius: 14px; padding: 5px 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; color: #1a1a2e; background: #ffc107; }
 .fw-chip.danger { background: #fd7e14; color: #fff; }
-.fw-chip.out { background: #dc3545; color: #fff; }
-.fd-status { font-weight: 800; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; background: rgba(255,255,255,.08); font-size: 0.9rem; }
+.fw-chip.out { background: var(--alert-red); color: #fff; }
+.fd-status { font-weight: 800; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; background: var(--line-soft); font-size: 0.9rem; }
 .fd-status.warn { background: rgba(255, 193, 7, .25); }
 .fd-status.danger { background: rgba(253, 126, 20, .45); }
-.fd-status.out { background: #dc3545; color: #fff; }
+.fd-status.out { background: var(--alert-red); color: #fff; }
 .fd-sum { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; }
 .fd-nr { background: #6c757d; color: #fff; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; }
 
@@ -1162,3 +1174,94 @@ body {
 
 /* Discard button for TEST games in History (V3.37) */
 .ghi-exports button.discard-test { border-color: #fd7e14; color: #fd7e14; }
+
+/* ===== V3.40 SUN MODE (Settings → Display). Not saved: the app always starts in the default look. =====
+   Two looks while the owner picks one: "sun" = max contrast, "sun-light" = light version of the default. */
+html[data-theme="sun"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0f0f0;
+  --bg-card: #ffffff;
+  --bg-card-hover: #dddddd;
+  --red: #b00000;
+  --red-dark: #7a0000;
+  --red-light: #b00000;
+  --white: #000000;
+  --gray-light: #111111;
+  --gray-mid: #333333;
+  --gray-dark: #cccccc;
+  --green: #0f6b2a;
+  --green-dark: #094a1c;
+  --orange: #b34700;
+  --yellow: #8a6500;
+  --text-primary: #000000;
+  --text-secondary: #222222;
+  --border-color: #000000;
+  --toast-bg: #000000;
+  --alert-red: #b00000;
+  --endgame-bg: #ffffff;
+  --endgame-border: #000000;
+  --opp-goal-bg: #7a0000;
+  --opp-goal-border: #000000;
+  --muted-border: #000000;
+  --muted-text: #000000;
+  --line-strong: rgba(0,0,0,.6);
+  --line-soft: rgba(0,0,0,.25);
+}
+/* thicker outlines and bolder text so buttons stand out in glare */
+html[data-theme="sun"] body { font-weight: 600; }
+html[data-theme="sun"] .btn,
+html[data-theme="sun"] .stat-btn,
+html[data-theme="sun"] .player-card,
+html[data-theme="sun"] .team-action-btn,
+html[data-theme="sun"] .quarter-btn,
+html[data-theme="sun"] .strength-btn,
+html[data-theme="sun"] .filter-btn,
+html[data-theme="sun"] .pen-key,
+html[data-theme="sun"] .duration-btn,
+html[data-theme="sun"] .penalty-team-btn,
+html[data-theme="sun"] .pen-name-btn,
+html[data-theme="sun"] .sf-grid-item,
+html[data-theme="sun"] .penalty-player-item,
+html[data-theme="sun"] .ejection-player-item,
+html[data-theme="sun"] .settings-input,
+html[data-theme="sun"] .end-game-btn { border-width: 3px !important; }
+html[data-theme="sun"] .end-game-btn { color: #000; }
+html[data-theme="sun"] .btn-secondary { border: 3px solid #000; }
+html[data-theme="sun"] .stat-btn,
+html[data-theme="sun"] .player-card .jersey,
+html[data-theme="sun"] .team-action-btn { font-weight: 800; }
+
+html[data-theme="sun-light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #eef1f6;
+  --bg-card: #dde6f2;
+  --bg-card-hover: #c6d4e8;
+  --red: #c00000;
+  --red-dark: #900000;
+  --red-light: #c00000;
+  --white: #12122a;
+  --gray-light: #222233;
+  --gray-mid: #555566;
+  --gray-dark: #c8cfdb;
+  --green: #1e7e34;
+  --green-dark: #155d26;
+  --orange: #c85000;
+  --yellow: #a07800;
+  --text-primary: #12122a;
+  --text-secondary: #3d4152;
+  --border-color: #9aa6bb;
+  --toast-bg: #12122a;
+  --alert-red: #c00000;
+  --endgame-bg: #ffffff;
+  --endgame-border: #9aa6bb;
+  --opp-goal-bg: #8b0000;
+  --opp-goal-border: #8b0000;
+  --muted-border: #9aa6bb;
+  --muted-text: #3d4152;
+  --line-strong: rgba(0,0,0,.25);
+  --line-soft: rgba(0,0,0,.1);
+}
+html[data-theme="sun-light"] .end-game-btn { color: #3d4152; }
+/* Display picker in Settings */
+.theme-choice { display: flex; gap: 8px; flex-wrap: wrap; }
+.theme-choice .btn.selected { outline: 3px solid var(--red); outline-offset: 2px; }

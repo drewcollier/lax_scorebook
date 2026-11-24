@@ -28,7 +28,7 @@
   <img src="logo.png" alt="FHS Tigers" width="69" height="50">
   <div>
     <h1>Tigers Lacrosse Scorebook</h1>
-    <div class="version">V3.39</div>
+    <div class="version">V3.40</div>
   </div>
 </div>
 
@@ -211,6 +211,17 @@
 <!-- SETTINGS TAB -->
 <div class="tab-content" id="tab-settings">
   <div class="settings-section">
+    <h3>Display</h3>
+    <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">
+      Sun mode makes the screen easier to read in bright sun. The app always opens in the normal look.
+    </p>
+    <div class="theme-choice" id="themeChoice">
+      <button class="btn btn-secondary" data-theme-btn="" onclick="setTheme('')">Normal</button>
+      <button class="btn btn-secondary" data-theme-btn="sun" onclick="setTheme('sun')">&#9728; Sun: max contrast</button>
+      <button class="btn btn-secondary" data-theme-btn="sun-light" onclick="setTheme('sun-light')">&#9728; Sun: light</button>
+    </div>
+  </div>
+  <div class="settings-section">
     <h3>Google Apps Script URL</h3>
     <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">
       The team's link is built into the app. Leave this blank unless you were given a different link to use.
@@ -257,7 +268,7 @@
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:0.8rem; color:var(--text-secondary);">
-      Fishers Tigers Lacrosse Scorebook V3.39<br>
+      Fishers Tigers Lacrosse Scorebook V3.40<br>
       <span id="storageStatus"></span><br>
       Event-based recording with offline-first architecture.<br>
       Built for sideline use during live games.

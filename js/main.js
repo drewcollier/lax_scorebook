@@ -8,6 +8,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   loadState();
   applyPinSetting();
+  setTheme('');   // always open in the normal look (V3.40)
   renderGameUI();
   // Quietly retry any games that didn't reach the workbook last time.
   setTimeout(syncPendingGames, 2000);

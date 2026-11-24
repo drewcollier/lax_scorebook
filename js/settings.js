@@ -87,3 +87,15 @@ function testConnection() {
     status.style.color = '#dc3545';
   });
 }
+
+// V3.40 Sun mode (Settings → Display). Deliberately NOT saved: the app always opens in the normal look.
+// '' = normal (dark), 'sun' = max contrast, 'sun-light' = light version of the normal colors.
+function setTheme(name) {
+  var t = (name === 'sun' || name === 'sun-light') ? name : '';
+  if (t) document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+  var btns = document.querySelectorAll('[data-theme-btn]');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('selected', btns[i].getAttribute('data-theme-btn') === t);
+  }
+}
