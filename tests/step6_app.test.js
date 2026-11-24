@@ -64,7 +64,7 @@ function freshCopy() {
   await ctx.setOffline(true);
   await page.reload();
   const off = await page.evaluate(() => [document.querySelector('.version').textContent, document.querySelector('.header img').naturalWidth, state.players.length]);
-  check('no signal: app opens from the saved copy, logo and roster intact', off[0] === 'V3.39' && off[1] > 100 && off[2] > 0, off);
+  check('no signal: app opens from the saved copy, logo and roster intact', off[0] === 'V3.40' && off[1] > 100 && off[2] > 0, off);
   const vpage = await ctx.newPage();
   await vpage.goto('http://localhost:8769/viewer.html').catch(() => {});
   check('no signal: the stats viewer page also opens', /Stats Viewer/.test(await vpage.evaluate(() => document.body.innerText).catch(() => '')));
@@ -78,7 +78,7 @@ function freshCopy() {
   await sleep(800);
   await page.reload();
   const v2 = await page.evaluate(() => document.querySelector('.version').textContent);
-  check('opens instantly from the saved copy, then picks up the update on the next open', v1 === 'V3.39' && v2 === 'V3.27-test-a', [v1, v2]);
+  check('opens instantly from the saved copy, then picks up the update on the next open', v1 === 'V3.40' && v2 === 'V3.27-test-a', [v1, v2]);
 
   // ---------- new release -> "new version ready" bar ----------
   publish('V3.27-test-b', 'lax-scorebook-v99');

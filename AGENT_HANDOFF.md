@@ -21,8 +21,8 @@ Last full rewrite: 2026-11-24 (after PR #29, app V3.39, script v9).
 
 ---
 ## 0. TL;DR state (2026-11-24)
-- App **V3.39** live on GitHub Pages; Apps Script **SCRIPT_VERSION 9** deployed by owner. `main` == all work; old branches deleted by owner. Latest PR: #31.
-- 472 automated checks (20 suites) pass, in `tests/` (added by the PR that adds this file).
+- App **V3.40** (Sun mode) in PR #32, pending owner merge (V3.39 live before that); Apps Script **SCRIPT_VERSION 9** deployed by owner. Latest PR: #32.
+- 485 automated checks (21 suites) pass, in `tests/` (added by the PR that adds this file).
 - Season not started; one real game in the live workbook (exhibition vs North Central, 2026-11-21). Owner is testing over several games, then reports bugs.
 - Open backlog: §11.
 
@@ -73,11 +73,11 @@ Static PWA (no build step, plain ES5-ish JS, global functions, loaded in order b
 | js/penalties.js | (V3.34) Penalties tab (`renderPenaltiesTab`), game-screen "Fouls" strip (`renderFoulWatch`, players ≥3:00 personal), breakdown modal (`openFoulDetail`). Totals recomputed from events each render. |
 | js/roster.js | Roster tab, Pull Roster/Officials (PIN), starters. |
 | js/sync.js | PIN helpers (`getWritePin`, `getSavedPin`, remember-PIN off by default; keys `scorebook_write_pin`, `scorebook_remember_pin`), `getScriptInfo(url)` (GET ?action=version → {version,test}, cached per URL in `scriptInfoCache`), `postJson(payload,url)`, `buildExportPayload(entry,pin)`, `pushGameFromHistory(id, mode)` (refuses if script `test` flag ≠ game.isTest), `syncPendingGames`, legacy form POST for script v1. |
-| js/settings.js | Settings (script URL override, Test Connection — shows workbook name + TEST mismatch warnings), Test mode (`setTestMode`, `saveTestUrl`, `applyTestMode` banner), PIN setting. |
+| js/settings.js | Settings (script URL override, Test Connection — shows workbook name + TEST mismatch warnings), Test mode (`setTestMode`, `saveTestUrl`, `applyTestMode` banner), PIN setting, Sun mode `setTheme('' / 'sun' / 'sun-light')` (V3.40; sets `<html data-theme>`; NOT persisted, main.js calls `setTheme('')` at startup). |
 | js/exports.js | `computeGameStats`, MaxPreps per-game CSV (`MAXPREPS_HEADERS`, `maxPrepsRows`, `downloadMaxPrepsCsv`). (In-app scoresheet REMOVED in V3.38.) |
 | js/history.js | History list: sync status / Press to sync, buttons MaxPreps file, Save game file (`downloadGameFile`, same JSON format as Drive backups), Discard (TEST games only, `discardTestGame`). Reset all data. |
 | js/main.js, js/boot.js | startup, SW registration + update bar ("new version" → Reload), storage persist. |
-| sw.js | service worker; `CACHE_VERSION = 'lax-scorebook-vNN'` (currently v42); ASSETS list (pages, css, every js incl. penalties.js, viewer/coach files, icons); install with `cache:'reload'`; stale-while-revalidate with `fetch(url,{cache:'no-cache'})`; non-GET/cross-origin untouched. **Bump CACHE_VERSION on every app release** (triggers blue update bar). Add new files to ASSETS. |
+| sw.js | service worker; `CACHE_VERSION = 'lax-scorebook-vNN'` (currently v43); ASSETS list (pages, css, every js incl. penalties.js, viewer/coach files, icons); install with `cache:'reload'`; stale-while-revalidate with `fetch(url,{cache:'no-cache'})`; non-GET/cross-origin untouched. **Bump CACHE_VERSION on every app release** (triggers blue update bar). Add new files to ASSETS. |
 | viewer.html + css/viewer.css + js/viewer.js | Families: email → 6-digit code → own player only (season totals, game-by-game, shot heatmap; sibling picker). Session token in localStorage `lax_viewer_session` (30 days). Coach link "Use a coach PIN" = whole-team view (PIN in memory only). Link to coach.html. |
 | coach.html + css/coach.css + js/coach.js | (V3.35) PIN box (coach or write PIN, memory only, Lock clears). Loads getRoster/getGames/getEvents('') once, computes everything client-side. Views: Game (score by quarter, Tigers-vs-opponent team table, sortable player table, both teams' penalty lists w/ OUT tag), Season (record, game-by-game + season row, team vs all opponents), Players (season, sortable, GP). |
 | Code.gs | Apps Script (see 3.3). |
@@ -168,6 +168,7 @@ Menu-only changes work after save; web app changes need the deploy.
 | #29 | 11-22 | Interception = CT + GB + INT (V3.39) |
 | #30 | 11-24 | AGENT_HANDOFF.md + tests/ added to repo |
 | #31 | 11-24 | handoff made a mandatory living document (rules at top), CLAUDE.md + AGENTS.md pointers |
+| #32 | 11-24 | Sun mode: Settings → Display (Normal / Sun: max contrast / Sun: light), not saved; hard-coded colors moved to CSS variables (V3.40) |
 Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; branch protection ruleset; all old branches deleted (owner).
 
 ## 8. Lessons / gotchas
@@ -178,16 +179,20 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 - index.html is LF now (was CRLF pre-split).
 - History trims synced games beyond MAX_HISTORY=3 (js/game.js); unsynced kept.
 - The owner's first instinct to "refresh/clear history" won't clear localStorage; explain where state lives.
+- Colors/theming (V3.40): all app colors come from CSS variables in css/app.css `:root`; themes override them under `html[data-theme="sun"|"sun-light"]` at the end of app.css. `--white` means "main text color" (becomes black in Sun); use `--on-accent` for text on solid red/green/orange buttons and toasts, and for field-zone SVG strokes. Don't add hard-coded colors; add a variable and set it in all three blocks. Inline `color:var(--white)` in index.html is fine (it's text).
+- tests/codegs.test.js used `/tmp/orig/Code.gs` (only existed in the first sandbox); fixed in PR #32 to `/tmp/oldgs/orig.gs` (built by servers.sh).
+- Shallow clones lack commits 0509f5a/7a311f7 used by servers.sh → 3 suites fail; run `git fetch --depth=1000 origin main` first.
 - Background processes in the agent sandbox die between turns → run `tests/servers.sh` at the start of each test run (run_all.sh does).
 
 ## 9. Tests (tests/)
 - Requirements: node, python3, git (servers.sh rebuilds old scripts from history: `0509f5a:Code.gs` = Step-1 era, `7a311f7:Code.gs` = v2), Playwright (`npm i playwright` or env `PLAYWRIGHT=/path/node_modules/playwright`), Chrome (`CHROME=/usr/bin/google-chrome` if Playwright browser not installed). In the original sandbox: `PLAYWRIGHT=/opt/npm-tools/node_modules/playwright CHROME=/usr/bin/google-chrome tests/run_all.sh` (~10–12 min).
 - `gas_mock.js`: fake SpreadsheetApp/Properties/Cache/Lock/MailApp/DriveApp/Utilities/Session/Ui (queued answers via `env.uiAnswers`), `seedLiveWorkbook` (live-like layout; 3 players → P001 Truman Collier #3 Midfield, P002 Graham Vergara #4 Attack, P003 Elijah Dorris #57 Goalie; EVIL adds P004 with HTML name), `setNow` clock.
 - `mock_script_server.js <port> <Code.gs>`: Code.gs over HTTP; hooks `/__reset`, `/__state`, `/__mail`, `/__run` (POST JS evaluated in script context). Ports: 8770 current (EVIL), 8773 current as TEST copy, 8771 orig, 8772 v2; static 8765 repo, 8768 /tmp/s3, 8769 /tmp/s6 (copies via make_copy.sh with DEFAULT_SCRIPT_URL → :8770). Test PIN in mock = `1234`.
-- Suites: codegs*.test.js = script unit tests per version (codegs6 family sign-in, codegs7 PINs/lockout, codegs8 TEST copy/backups/restore, codegs9 Sheet scoresheet); step*.test.js = Playwright app/viewer/coach tests (step8 Test mode, step9 penalties tab, step10 coach page, step11 jersey order, step12 discard, step13 interception). Size budget test: app files < 260 KB (step6).
+- Suites: codegs*.test.js = script unit tests per version (codegs6 family sign-in, codegs7 PINs/lockout, codegs8 TEST copy/backups/restore, codegs9 Sheet scoresheet); step*.test.js = Playwright app/viewer/coach tests (step8 Test mode, step9 penalties tab, step10 coach page, step11 jersey order, step12 discard, step13 interception, step14 Sun mode). Size budget test: app files < 260 KB (step6).
 - Add a new suite per feature; add it to run_all.sh list.
 
 ## 10. Owner context for future decisions
+- Uses app at games on Android tablet or iPad; sun glare is a problem (plans a matte screen protector). Sun mode request (11-24): owner chose toggle in **Settings only** (not header), **scorebook only** (not coach/viewer pages), **always start dark** (don't save). Asked to see both looks, so V3.40 ships two (max contrast vs light) for him to pick after field testing; then remove the loser.
 - Uses app at games on Android tablet; scorekeeper hands tablet to coach to sync with PIN. Can't print at the field.
 - Coaches asked for the stats (coach page done) and a goal-face grid (backlog).
 - Families: ≤2 logins per player; emails collected via the form before the season (~3 months out from Nov 2026).
@@ -197,7 +202,8 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 2. **Team edition** for other schools (separate project/repo; Tigers app stays separate): export-only (finished game → CSV/PDF; optional preformatted MaxPreps file), no shared server, no responsibility for other schools' data; first-run setup (team name, colors, boys/girls rules, logo); identical CSV for all teams + column-mapping doc; Android first then Apple stores; free for under-resourced schools; owner will get a girls' scoresheet and has a scorekeeper to QA girls rules. Not started.
 3. Girls rules support (part of team edition).
 4. Optional: build TEST link into config (`TEST_SCRIPT_URL`) if owner sends it; owner may enable "Automatically delete head branches"; owner may add an INT note to the Definitions tab.
-5. Watch-list from live games: owner is testing over several games and will report bugs/missed details.
+5. **Sun mode follow-up:** owner tries both Sun looks outdoors and picks one → remove the other (CSS block + button + step14 checks). Possible tweaks after field test: bigger text in Sun, header shortcut (owner declined for now).
+6. Watch-list from live games: owner is testing over several games and will report bugs/missed details.
 
 ## 12. How to start in a new session
 1. `git clone`/pull repo (attach via add_repo if needed), read this file + README.
@@ -209,3 +215,4 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 ## 13. Doc log
 - 2026-11-24: created (covers PRs #1–#29, app V3.39, script v9); tests/ added to repo (PR #30).
 - 2026-11-24: living-document rules added at top; CLAUDE.md + AGENTS.md pointers (PR #31).
+- 2026-11-24: Sun mode (V3.40), theming notes in §8, owner's choices in §10, follow-up in §11 (PR #32).

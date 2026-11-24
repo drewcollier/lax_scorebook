@@ -103,7 +103,7 @@ check('six 319-row games save fine (Events grows past its 1,000 rows)', allOk &&
 
 // the ORIGINAL Code.gs fails here - proves the test catches the bug
 if (!process.env.CODE) {
-  const old = seedLiveWorkbook(makeEnv({ codePath: '/tmp/orig/Code.gs' }));
+  const old = seedLiveWorkbook(makeEnv({ codePath: '/tmp/oldgs/orig.gs' }));
   let oldFail = false;
   for (let g = 1; g <= 6; g++) {
     const o = old.ctx.doPost({ parameter: {}, postData: { contents: JSON.stringify(sampleGame('B' + g, 'X', 300)) } });

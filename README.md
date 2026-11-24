@@ -204,6 +204,14 @@ History. Only TEST games have a Discard button.
 
 In the TEST copy, **Lacrosse Tools -> Clear all games (TEST copy only)** empties it.
 
+## Sun mode (Settings -> Display)
+
+For bright sun on the field: **Settings -> Display** has **Normal** (the usual dark look),
+**Sun: max contrast** (white background, black text, thick black button outlines) and
+**Sun: light** (a light version of the normal colors). It only changes colors; scoring works
+the same. It isn't saved: the app always opens in the Normal look. A matte screen protector
+and full screen brightness help too.
+
 ## Penalties tab (foul-out tracking)
 
 - **Penalties** tab (next to Game): every player on both teams who has a
