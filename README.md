@@ -279,8 +279,9 @@ The `tools/` folder is only for this; the app doesn't use it.
 
 ## For AI agents / automated tests
 
-- **`AGENT_HANDOFF.md`** — full project state, history, workflow and backlog for an
-  agent picking up this work. Update it in every PR that changes behavior.
+- **`AGENT_HANDOFF.md`** — the single, living handoff: project state, history, workflow
+  and backlog for an agent picking up this work. Updated in every PR (never replaced by a
+  new document). `CLAUDE.md` / `AGENTS.md` point agents to it.
 - **`tests/`** — automated checks (mock Google Sheet + Apps Script, Playwright app tests).
   Run `tests/run_all.sh` (needs node, python3, git, Playwright and Chrome; see the
   handoff file §9). Not used by the app.

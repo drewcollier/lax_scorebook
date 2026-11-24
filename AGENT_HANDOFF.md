@@ -1,11 +1,27 @@
 # AGENT_HANDOFF.md — lax_scorebook (Fishers Tigers boys lacrosse)
 
 Purpose: everything an AI agent needs to continue work on this project. Dense on purpose; not for humans.
-**Keep it current:** every PR that changes behavior, versions, workflow or open items updates the matching section here + adds a line to §13 Doc log. Last full rewrite: 2026-11-24 (after PR #29, app V3.39, script v9).
+
+## LIVING DOCUMENT — MANDATORY RULES FOR EVERY AGENT
+This file is the ONE permanent handoff for this project. The owner pulls from it instead of re-creating handoffs.
+1. **Never create a new handoff/summary/context document** (no HANDOFF2.md, no "session summary" files, no Word docs). Edit THIS file in place. Don't rename or move it.
+2. **Every PR that changes anything** (code, behavior, versions, IDs/links, workflow, decisions, backlog, bugs found) **includes the matching edits to this file in the same PR**:
+   - §0 TL;DR (versions, date, state)
+   - the affected sections (architecture, event model, gotchas, …)
+   - a row in §7 History (PR #, date, one-line change)
+   - §11 Backlog (add new requests/bugs; remove done items)
+   - a line in §13 Doc log
+   Add "AGENT_HANDOFF.md updated" to the PR body. A PR without it is incomplete.
+3. **Edit, don't pile up:** replace stale facts instead of appending contradictions. History lives in §7/§13 only.
+4. **When the owner asks for a handoff, or a session is ending / running out of context:** bring this file fully current (PR it if anything changed) and tell the owner "AGENT_HANDOFF.md is current as of PR #N". Do not produce a separate document.
+5. Decisions or facts learned in chat that aren't code (owner preferences, setup done in Google/GitHub, rules confirmed) still go here (§1, §2, §10 or §11) via the next PR.
+6. Mark anything uncertain "(verify)". Never put PIN values, family emails or other personal data here (public repo).
+
+Last full rewrite: 2026-11-24 (after PR #29, app V3.39, script v9).
 
 ---
 ## 0. TL;DR state (2026-11-24)
-- App **V3.39** live on GitHub Pages; Apps Script **SCRIPT_VERSION 9** deployed by owner. `main` == all work; no open PRs; only branch is `main`.
+- App **V3.39** live on GitHub Pages; Apps Script **SCRIPT_VERSION 9** deployed by owner. `main` == all work; old branches deleted by owner. Latest PR: #31.
 - 472 automated checks (20 suites) pass, in `tests/` (added by the PR that adds this file).
 - Season not started; one real game in the live workbook (exhibition vs North Central, 2026-11-21). Owner is testing over several games, then reports bugs.
 - Open backlog: §11.
@@ -108,7 +124,8 @@ Settings → Test mode (needs TEST link). New games while on get `isTest:true` +
 - Script: bump `SCRIPT_VERSION` in Code.gs header comment list + const; update every test that asserts the version (`grep -rn "version === 9\|version 9\|Script version 9" tests/`).
 - New JS/CSS/HTML file → add to sw.js ASSETS (and index.html script order if app), tests/make_copy.sh copy list if a new top-level page.
 - Docs touched → regenerate (tools/) and check page counts.
-- Run `tests/run_all.sh` → all pass → commit → push branch → REST PR to main with "Your steps".
+- **Update AGENT_HANDOFF.md** per the rules at the top (§0, affected sections, §7 row, §11, §13).
+- Run `tests/run_all.sh` → all pass → commit → push branch → REST PR to main with "Your steps" and "AGENT_HANDOFF.md updated".
 
 ## 5. Owner's Apps Script update procedure (put in every script PR)
 1. PR → Files changed → Code.gs → ⋯ → View file → **Copy raw file** button (NOT raw.githubusercontent — it served a stale cache once).
@@ -149,7 +166,8 @@ Menu-only changes work after save; web app changes need the deploy.
 | #27 | 11-22 | Sheet's printable scoresheet: % lines, Clears/Rides, SV%, start time "11:00", weather °F once, fit one page (v9) |
 | #28 | 11-22 | removed app's printable scoresheet (Sheet's is the only one) (V3.38) |
 | #29 | 11-22 | Interception = CT + GB + INT (V3.39) |
-| (this) | 11-24 | AGENT_HANDOFF.md + tests/ added to repo |
+| #30 | 11-24 | AGENT_HANDOFF.md + tests/ added to repo |
+| #31 | 11-24 | handoff made a mandatory living document (rules at top), CLAUDE.md + AGENTS.md pointers |
 Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; branch protection ruleset; all old branches deleted (owner).
 
 ## 8. Lessons / gotchas
@@ -185,7 +203,9 @@ Non-PR events: owner enabled Drive API in GCP 791676404627; created TEST copy; b
 1. `git clone`/pull repo (attach via add_repo if needed), read this file + README.
 2. Re-read §1. Check `gh api repos/drewcollier/lax_scorebook/pulls?state=open` and branches.
 3. Run `tests/run_all.sh` to confirm a green baseline before changing anything.
-4. Work on a new branch from main; PR to main; update this file in the same PR.
+4. Work on a new branch from main; PR to main; update this file in the same PR (rules at top).
+5. Repo root `CLAUDE.md` / `AGENTS.md` point here so tools that auto-load those files find this one.
 
 ## 13. Doc log
-- 2026-11-24: created (covers PRs #1–#29, app V3.39, script v9); tests/ added to repo.
+- 2026-11-24: created (covers PRs #1–#29, app V3.39, script v9); tests/ added to repo (PR #30).
+- 2026-11-24: living-document rules added at top; CLAUDE.md + AGENTS.md pointers (PR #31).
